@@ -1,0 +1,6 @@
+# Jekyll artifacts
+_site
+.bundle
+.sass-cache
+Gemfile.lock
+.jekyll-metadata
