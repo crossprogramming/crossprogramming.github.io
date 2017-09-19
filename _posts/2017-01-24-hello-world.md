@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Hellow, world!"
+title:  "Hello, world!"
 date:   2017-01-24 22:49:54 +0200
 categories: crossprogramming
 ---
