@@ -5,7 +5,7 @@ date:   2018-01-06 19:04:44 +0200
 tags: [programming, github, github-wiki]
 ---
 # Context
-After giving a [Rancher](https://rancher.com/rancher/) workshop during the 5^th^ edition of the Java Tech Group Day, an [iQuest](http://www.iquestgroup.com/en/) internal event, which took place on September 7^th^ 2017, I thought about open-source it on GitHub as a series of wiki pages to let people outside this company benefit from it too.  
+After giving a [Rancher](https://rancher.com/rancher/) workshop during the 5th edition of the Java Tech Group Day, an [iQuest](http://www.iquestgroup.com/en/) internal event, which took place on September 7th 2017, I thought about open-source it on GitHub as a series of wiki pages to let people outside this company benefit from it too.  
 After getting the OK from the Java Practice leadership to publish it on [GitHub](https://github.com/satrapu/rancher-workshop), I started converting the workshop written as series of Confluence pages to one of the formats supported by [GitHub wiki](https://help.github.com/articles/about-github-wikis/): [Markdown](https://daringfireball.net/projects/markdown/).  
 Below you may find how I ended-up displaying the workshop images on GitHub wiki pages.
 
