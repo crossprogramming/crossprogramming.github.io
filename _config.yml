@@ -23,7 +23,7 @@ twitter_username: satrapu
 github_username:  satrapu
 google_analytics: UA-47747252-1
 disqus:
-  shortname: crossprogramming
+  shortname:
   
 # Build settings
 markdown: kramdown
