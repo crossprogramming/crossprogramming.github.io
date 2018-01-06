@@ -10,7 +10,7 @@ After getting the OK from the Java Practice leadership to publish it on [GitHub]
 Below you may find how I ended-up displaying the workshop images on GitHub wiki pages.
 
 # Approach #1: GitHub repo image relative URL
-Since the workshop was built as a series of step-by-step tutorials, it contains lots of high-res images; see one [here](https://github.com/satrapu/rancher-workshop/blob/master/images/scenarios/basic/01/image2017-8-19_22-23-22.png). My first approach was to store them in the GitHub repository where my wiki pages were located too. A wiki page would link such an image, but the end result was a resized image which required the user to resort to browser zoom-in to clearly see the image and then zoom out to read the text - a pretty awful user-experience!  
+Since the workshop was built as a series of step-by-step tutorials, it contained lots of high-resolution images; see one [here](https://github.com/satrapu/rancher-workshop/blob/master/images/scenarios/basic/01/image2017-8-19_22-23-22.png). My first approach was to store them in the GitHub repository where my wiki pages were located too. A wiki page would link such an image, but the end result was a resized image which required the user to resort to browser zoom-in to clearly see the image and then zoom out to read the text - a pretty awful user-experience!  
 Anyway, the image is displayed in a wiki page via this Markdown fragment:
 ```
 ![](https://github.com/satrapu/rancher-workshop/blob/master/images/scenarios/basic/01/image2017-8-19_22-23-22.png)
