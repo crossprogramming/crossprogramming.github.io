@@ -128,10 +128,10 @@ docker container run -v <DOCKER_HOST_ANSIBLE_PLAYBOOKS_HOME>:/opt/ansible-playbo
 ````
 
 <h2 id="example">Example</h2>
-The below example has been run on a Windows 10 Pro x64, release 1709, Docker version 17.12.0-ce, build c97c6d6.  
-Given the following folder __hello-world__ on my Windows machine:
+The below commands have been executed on a machine running Windows 10 Pro x64, release 1709 and Docker version 17.12.0-ce, build c97c6d6.  
+Given the following folder __hello-world__ on this Windows machine:
 ````powershell
-P:\\Satrapu\Programming\Ansible
+P:\Satrapu\Programming\Ansible
 └───hello-world
         hello-world.yml
 ````
@@ -150,7 +150,7 @@ Containing the __hello-world.yml__ file:
       msg: Hello, world!
 ````
 
-I'm playing the hello-world.yml playbooks via the following command:
+I'm playing the hello-world.yml playbook via the following command:
 ````powershell
 docker container run -v P:\Satrapu\Programming\Ansible\hello-world:/opt/ansible-playbooks satrapu/ansible-alpine-apk ansible-playbook hello-world.yml
 
@@ -181,7 +181,7 @@ ansible 2.4.1.0
 ````
 
 <h2 id="conclusion">Conclusion</h2>
-Ansible can be run on all operating systems with similar developer experience.
+Ansible can be run on many operating systems with similar developer experience, as long as they are [supported by Docker](https://docs.docker.com/install/#supported-platforms).  
 Just because a tool is not officially supported on Windows or it's *nix only, doesn't mean you have to forget about it - dockerize it and start using it!
 
 <h2 id="resources">Resources</h2>
