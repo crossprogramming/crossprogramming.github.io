@@ -47,7 +47,7 @@ Below you may find 3 Docker images I have created for running Ansible on Windows
 
 <h2 id="common">Common things</h2>
 I wanted a simple way of running Ansible playbooks from my Windows machine, so I'm using a Docker volume for sharing them with the Docker container; the playbooks can be found here: __/opt/ansible-playbooks__ - this path is customizable via a build argument, __ANSIBLE_PLAYBOOKS_HOME__.  
-The whole development experience is like this: open your favourite (Ansible aware) text editor (see several options [below](#bonus)), write your playbooks, then play them from a CLI of your choice (e.g. PowerShell, [Git Bash](http://www.techoism.com/how-to-install-git-bash-on-windows/) or [Cmder](http://cmder.net/)) - basically, the same as running Ansible from a Linux or macOS control node.  
+The whole development experience is like this: open your favourite (Ansible aware) text editor (see several options [below](#resources)), write your playbooks, then play them from a CLI of your choice (e.g. PowerShell, [Git Bash](http://www.techoism.com/how-to-install-git-bash-on-windows/) or [Cmder](http://cmder.net/)) - basically, the same as running Ansible from a Linux or macOS control node.  
 
 Below you may find the Docker commands you should use for any of these 3 images.  
 Please replace the __\<SUFFIX\>__ placeholder with the appropriate value: __apk__, __pip__ or __git__.
