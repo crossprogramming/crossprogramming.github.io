@@ -30,7 +30,7 @@ As a real life example of when to use Ansible Vault, I have chosen the task of r
 * Setup the VM to be managed by Ansible  
   * Provide SSH acccess - already done, since Docker Machine will handle it while creating the VM 
   * Provide a working Python version - as you'll see below, this step is not difficult at all
-* Clone a git repository from GitHub containing the Ansible playbook used for running the Docker container based on the [hello-world](https://hub.docker.com/_/hello-world/) image
+* Clone a git repository from [GitHub](https://github.com/satrapu/ansible-vault-on-windows) containing the Ansible playbook used for running the Docker container based on the [hello-world](https://hub.docker.com/_/hello-world/) image
 * Add the Docker Hub credentials ued for pulling the image inside the appropriate Ansible variable YAML file
 * Run Ansible Vault from a Docker container to encrypt these credentials
 * Run the Ansible playbook used for pulling the Docker image, run the container, then remove them both
