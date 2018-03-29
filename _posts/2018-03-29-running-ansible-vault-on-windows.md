@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Running Ansible Vault on Windows"
-date: 2018-03-26 11:52:10 +0200
+date: 2018-03-29 11:52:10 +0200
 tags: [programming, ansible, ansible-vault, docker, docker-machine, hyper-v, boot2docker, windows]
 ---
 - [Context](#context)
@@ -20,8 +20,9 @@ tags: [programming, ansible, ansible-vault, docker, docker-machine, hyper-v, boo
 <h2 id="context">Context</h2>  
 
 After having successfully run Ansible on Windows using Docker, as documented inside my previous [post](http://crossprogramming.com/2018/02/15/running-ansible-on-windows.html), I thought about documenting how to use [Ansible Vault](https://docs.ansible.com/ansible/latest/vault.html) on Windows.  
-This tool was included in Ansible since version 1.5 and its purpose is to ensure sensitive data like credentials, private keys, certificates, etc., used by Ansible playbooks are stored encrypted.  
+This tool was included in Ansible since version 1.5 and its purpose is to ensure sensitive data like credentials, private keys, certificates, etc., used by Ansible playbooks, are stored encrypted.  
 This post will present my approach for running Ansible Vault on Windows using Docker, along with the issues I have encountered and their fixes.  
+
 
 As a real life example of when to use Ansible Vault, I have chosen the task of running a Docker container inside a virtual machine:  
 * Create the VM
@@ -44,8 +45,8 @@ All versions below are the latest at the time of writing this particular section
 * Windows 10 Professional Edition (v1709)
 * Hyper-V
 * Docker for Windows - I've recently upgraded to v18.03.0-ce, but older versions should be good enough
-* Docker Machine - v0.13.0 or older, since v0.14.0 (coming with Docker for Windows v18.0.3.0-ce) is unable to create VMs using hyperv driver - see more details [here](https://github.com/docker/machine/issues/4342)
-  * Even though the GitHub issue is closed, right after upgrading Docker for Windows from 17.12.1-ce to v18.03.0-ce, I was no longer able to create VMs using Docker Machine and hyperv driver; this issue did not occur when using v0.13.0!  
+* Docker Machine - v0.13.0 or older, since v0.14.0 (coming with Docker for Windows v18.0.3.0-ce) is unable to create VMs using hyperv driver - see more details [here](https://github.com/docker/machine/issues/4424)
+  * Right after I've upgraded Docker for Windows from 17.12.1-ce to v18.03.0-ce, I was no longer able to create VMs using Docker Machine and hyperv driver; this issue did not occur when using v0.13.0!  
   * Download Docker Machine v0.13.0 from [GitHub](https://github.com/docker/machine/releases/download/v0.13.0/docker-machine-Windows-x86_64.exe), rename it to docker-machine.exe and then move it inside %DOCKER_HOME%\resources\bin to overwrite the existing docker-machine.exe (v0.14.0)
 * [Visual Studio Code](https://code.visualstudio.com/) - v1.21.1
   * Any other editor capable of switching line endings between CRLF and LF should be fine too - see below for the actual motivation behind this prerequisite ;)
@@ -89,12 +90,12 @@ docker-machine create `
  ````powershell
  docker-machine ls
 # NAME            ACTIVE   DRIVER   STATE     URL                        SWARM   DOCKER    ERRORS
-# ansible-vault   -        hyperv   Running   tcp://192.168.1.167:2376           Unknown   Unable to query docker version: Get https://192.168.1.167:2376/v1.15/version: x509: certificate signed by unknown authority
+# ansible-vault   -        hyperv   Running   tcp://192.168.1.168:2376           Unknown   Unable to query docker version: Get https://192.168.1.168:2376/v1.15/version: x509: certificate signed by unknown authority
  ````  
 * Get the IPv4 address of the VM, since you'll needed it inside the Ansible inventory file:
 ````powershell
 docker-machine ip ansible-vault
-# 192.168.1.167
+# 192.168.1.168
 ````  
 * Connect to the VM using SSH (see more [here](https://github.com/boot2docker/boot2docker#ssh-into-vm))
   * In case you're unable to enter the VM via SSH from a Powershell terminal, try using Git Bash run as admin - welcome to Windows!  
@@ -174,6 +175,21 @@ tce-load -wi python python-setuptools
 # python-setuptools.tc 100% |*********************************************************************************************************************************************|   236k  0:00:00 ETA
 # python-setuptools.tcz: OK
 ````  
+
+In case you forgot this step, when running Ansible playbook you'll see something like this:
+{% raw %}
+````powershell
+# PLAY [docker_hosts] ************************************************************
+
+# TASK [Gathering Facts] *********************************************************
+# fatal: [ansible_vault_example]: FAILED! => {"changed": false, "failed": true, "module_stderr": "", "module_stdout": "/bin/sh: /usr/local/bin/python: not found\r\n", "msg": "MODULE FAILURE", "rc": 0}
+#         to retry, use: --limit @/opt/ansible-playbooks/hello-world.retry
+
+# PLAY RECAP *********************************************************************
+# ansible_vault_example      : ok=0    changed=0    unreachable=0    failed=1
+````
+{% endraw %}  
+
 * Display Python version
 ````bash
 python --version
@@ -192,24 +208,63 @@ cd E:/Satrapu/Programming/Ansible
 git clone https://github.com/satrapu/ansible-vault-on-windows.git
 ````  
 
-This git repo contains the classic Ansible folder structure, as documented [here](http://docs.ansible.com/ansible/latest/playbooks_best_practices.html#directory-layout).
+This git repo is based on the classic Ansible folder structure, as documented [here](http://docs.ansible.com/ansible/latest/playbooks_best_practices.html#directory-layout).
 
-* Update the value of the "ansible_host" key found inside the Ansible inventory file __local__ with the aforementioned IP address (e.g. ansible_host=192.168.1.167)
+* Change the the Ansible inventory file named __local__
+  * Set the value of the __ansible_host__ property to the IP address of the ansible-vault VM (e.g. ansible_host=192.168.1.168)
+  * Please note property __ansible_ssh_private_key_file__ has been set to "/opt/docker-machine/ansible-vault/id_rsa" value - the id_rsa represents a private key generated by Docker Machine while  creating ansible-vault VM and which will be made available inside the Ansible Docker container via a Docker volume; this property should not be changed without fully understanding what else needs to be changed (see below)
 
-* Create a file named __vault.yml__ under __/ansible-vault-on-windows/group_vars/docker_hosts__ folder and add the following lines:
+* Create a file named __vault_password__ under __../ansible-vault-password__ folder (outside Git repo!) and add a password (one line, no line ending)  
+  * Since this file contains a password, it must not be put under source control, that's why it should be created outside the Git repo
+  * To make it available inside Ansible Docker container, we'll mount the containing folder as a Docker volume under path "/opt/ansible-vault-password"
+    * Example: "-v E:/Satrapu/Programming/Ansible/ansible-vault-password:/opt/ansible-vault-password"
+  * I have used [https://strongpasswordgenerator.com](https://strongpasswordgenerator.com/) to generate such password  
+    * Click "Show Options" panel under the "Generate password" big green button to fine tune your password
+
+* Replace the __TBD__ placeholders from the __/ansible-vault-on-windows/group_vars/docker_hosts/vault.yml__ file:
+  * This file should be put under source control once it has been encrypted
 ````yaml
 vault_docker_registry_url: TBD
 vault_docker_registry_auth_username: TBD
 vault_docker_registry_auth_password: TBD
 vault_docker_registry_auth_email: TBD
-````
+```` 
+with the appropriate values, like this:  
+````yaml
+vault_docker_registry_url:  https://index.docker.io/v1/
+vault_docker_registry_auth_username: some_user_name
+vault_docker_registry_auth_password: P@zZwWwooRdddd
+vault_docker_registry_auth_email: some_user_name@server.ro
+```` 
 
-Replace the __TBD__ placeholders with the appropriate values.  
 For instance, the Docker Hub registry URL can be found via this command:
 ````powershell
 docker info | findstr Registry
 # Registry: https://index.docker.io/v1/
 ````
+
+In case you forgot to correctly update __vault.yml__ file, when running Ansible playbook you should see something like this:
+{% raw %}
+````powershell
+# PLAY [docker_hosts] ************************************************************
+
+# TASK [Gathering Facts] *********************************************************
+# ok: [ansible_vault_example]
+
+# TASK [run_hello_world_container : Install pip] *********************************
+# changed: [ansible_vault_example]
+
+# TASK [run_hello_world_container : Install docker-py] ***************************
+# changed: [ansible_vault_example]
+
+# TASK [run_hello_world_container : Login into Docker registry TBD] **************
+# fatal: [ansible_vault_example]: FAILED! => {"changed": false, "failed": true, "msg": "Parameter error: the email address appears to be incorrect. Expecting it to match /[^@]+@[^@]+\\.[^@]+/"}
+#         to retry, use: --limit @/opt/ansible-playbooks/hello-world.retry
+
+# PLAY RECAP *********************************************************************
+# ansible_vault_example      : ok=3    changed=2    unreachable=0    failed=1
+````
+{% endraw %}  
 
 * You'll see a __vars.yml__ file under the same folder, __/ansible-vault-on-windows/group_vars/docker_hosts__:
 {% raw %}
@@ -221,10 +276,7 @@ docker_registry_auth_email: "{{ vault_docker_registry_auth_email }}"
 ````
 {% endraw %}
 
-Ansible will use the password residing inside the one-line file passed as the value of the __--vault-password-file__ argument (e.g. --vault-password-file=./vault_password) to automatically decrypt the vault.yml file and will populate the above variables with the correct sensitive data, e.g. the user name and password used for pulling images from Docker Hub.
-
-* Copy the id_rsa private key generated by Docker Machine inside the cloned git repo
-  * The private key can be found under the home folder of the Windows user with admin rights who used Docker Machine to create the VM - e.g. C:\Users\satrapu\\.docker\\.machine\machines\ansible-vault
+Ansible will use the password residing inside the one-line file passed as the value of the __--vault-password-file__ argument (e.g. --vault-password-file=/opt/ansible-vault-password/vault_password) to automatically decrypt the vault.yml file and will populate the above variables with the correct sensitive data, e.g. the user name and password used for pulling images from Docker Hub.
 
 * After applying the aforementioned changes, the local git repo should look like this:  
 
@@ -236,11 +288,9 @@ E:; cd E:/Satrapu/Programming/Ansible/ansible-vault-on-windows; tree /F
 # │   .gitignore
 # │   ansible.cfg
 # │   hello-world.yml
-# │   id_rsa
 # │   LICENSE
 # │   local
 # │   README.md
-# │   vault_password
 # │   vault_password_provider.py
 # │
 # ├───group_vars
@@ -268,45 +318,34 @@ Running Ansible Vault from a Docker container will fail since I'm trying to moun
 docker container run `
                  --rm `
                  -v E:/Satrapu/Programming/Ansible/ansible-vault-on-windows:/opt/ansible-playbooks `
+                 -v E:/Satrapu/Programming/Ansible/ansible-vault-password:/opt/ansible-vault-password `
                  satrapu/ansible-alpine-apk:2.4.1.0-r0 `
                  ansible-vault encrypt `
-                    --vault-password-file=./vault_password `
+                    --vault-password-file=/opt/ansible-vault-password/vault_password `
                     ./group_vars/docker_hosts/vault.ym
 #  [WARNING]: Error in vault password file loading (default): Problem running
-# vault password script /opt/ansible-playbooks/vault_password ([Errno 8] Exec
-# format error). If this is not a script, remove the executable bit from the
+# vault password script /opt/ansible-vault-password/vault_password ([Errno 8]
+# Exec format error). If this is not a script, remove the executable bit from the
 # file.
-# ERROR! Problem running vault password script /opt/ansible-playbooks/vault_password ([Errno 8] Exec format error). If this is not a script, remove the executable bit from the file.
+# ERROR! Problem running vault password script /opt/ansible-vault-password/vault_password ([Errno 8] Exec format error). If this is not a script, remove the executable bit from the file.
 ````
 
 Here are the permissions found inside the Docker container:
 ````powershell
 docker container run `
                  --rm `
-                 -v E:/Satrapu/Programming/Ansible/ansible-vault-on-windows:/opt/ansible-playbooks `
+                 -v E:/Satrapu/Programming/Ansible/ansible-vault-password:/opt/ansible-vault-password `
                  satrapu/ansible-alpine-apk:2.4.1.0-r0 `
-                 ls -al
-# total 27
-# drwxr-xr-x    2 root     root          4096 Mar 25 20:13 .
-# drwxr-xr-x    3 root     root          4096 Feb 12 20:37 ..
-# drwxr-xr-x    2 root     root             0 Mar 25 20:22 .git
-# -rwxr-xr-x    1 root     root            66 Mar 25 18:38 .gitattributes
-# -rwxr-xr-x    1 root     root            15 Mar 25 20:10 .gitignore
-# -rwxr-xr-x    1 root     root         11323 Mar 25 18:38 LICENSE
-# -rwxr-xr-x    1 root     root            27 Mar 25 18:38 README.md
-# -rwxr-xr-x    1 root     root           424 Mar 15 20:43 ansible.cfg
-# drwxr-xr-x    2 root     root             0 Mar 25 18:26 group_vars
-# -rwxr-xr-x    1 root     root           159 Mar 16 22:26 hello-world.yml
-# -rwxr-xr-x    1 root     root          1675 Mar 13 21:27 id_rsa
-# -rwxr-xr-x    1 root     root           753 Mar 26 19:16 local
-# drwxr-xr-x    2 root     root             0 Mar 16 22:29 roles
+                 ls -al /opt/ansible-vault-password
+# total 5
+# drwxr-xr-x    2 root     root             0 Mar 29 19:56 .
+# drwxr-xr-x    1 root     root          4096 Mar 29 20:03 ..
 # -rwxr-xr-x    1 root     root           100 Mar 24 19:20 vault_password
-# -rwxr-xr-x    1 root     root           620 Mar 25 20:15 vault_password_provider.py
 ````
 
 The above executable bit related error message is pretty clear, unfortunately, at the moment there is no easy way of mounting files without the execute bit, as stated [here](https://docs.docker.com/docker-for-windows/troubleshoot/#permissions-errors-on-data-directories-for-shared-volumes).  
 
-On the other hand, Ansible knows how to process a file with executable bit containing a Vault password if it is a Python script, as documented [here](http://docs.ansible.com/ansible/latest/playbooks_vault.html#running-a-playbook-with-vault), so the idea is to load the password via a second file, which is a Python script, which will be passed as the value of the --vault-password-file argument - see an example [here](https://github.com/hashicorp/packer/issues/555#issuecomment-145749614).  
+On the other hand, Ansible knows how to process a file with executable bit containing a Vault password if it is a Python script, as documented [here](http://docs.ansible.com/ansible/latest/playbooks_vault.html#running-a-playbook-with-vault), so the idea is to load the password via a Python script, which will be passed as the value of the --vault-password-file argument - see an example [here](https://github.com/hashicorp/packer/issues/555#issuecomment-145749614).  
 At this moment I'm able to bypass the pesky Windows-Docker-folder-mounting issue, but this has lead me to the 2nd issue :)
 
 <h3 id="line-endings">Issue #2: Line endings</h3>  
@@ -316,10 +355,11 @@ Ansible Vault being able to run a Python script which returns the password is gr
 docker container run `
                  --rm `
                  -v E:/Satrapu/Programming/Ansible/ansible-vault-on-windows:/opt/ansible-playbooks `
+                 -v E:/Satrapu/Programming/Ansible/ansible-vault-password:/opt/ansible-vault-password `
                  satrapu/ansible-alpine-apk:2.4.1.0-r0 `
                  ansible-vault encrypt `
                     --vault-password-file=./vault_password_provider.py `
-                    ./group_vars/docker_hosts/vault.ym
+                    ./group_vars/docker_hosts/vault.yml
 #  [WARNING]: Error in vault password file loading (default): Problem running
 # vault password script /opt/ansible-playbooks/vault_password_provider.py ([Errno
 # 2] No such file or directory). If this is not a script, remove the executable
@@ -330,13 +370,14 @@ docker container run `
 The fix is to edit vault_password_provider.py with an editor having line endings set for this file to "LF" instead of "CRLF" - see such setup for [Visual Studio Code](https://stackoverflow.com/a/39532890).
 
 <h2 id="ansible-vault">Ansible Vault commands</h2>  
-Having fixed the above 2 issues, the following Ansible Vault commands will work as a charm:
+Having fixed the above 2 issues, the following Ansible Vault commands will work like a charm:
 
 * Encrypt vault.yml:  
 ````powershell
 docker container run `
                  --rm `
                  -v E:/Satrapu/Programming/Ansible/ansible-vault-on-windows:/opt/ansible-playbooks `
+                 -v E:/Satrapu/Programming/Ansible/ansible-vault-password:/opt/ansible-vault-password `
                  satrapu/ansible-alpine-apk:2.4.1.0-r0 `
                  ansible-vault encrypt `
                     --vault-password-file=./vault_password_provider.py `
@@ -347,6 +388,7 @@ docker container run `
 docker container run `
                  --rm `
                  -v E:/Satrapu/Programming/Ansible/ansible-vault-on-windows:/opt/ansible-playbooks `
+                 -v E:/Satrapu/Programming/Ansible/ansible-vault-password:/opt/ansible-vault-password `
                  satrapu/ansible-alpine-apk:2.4.1.0-r0 `
                  ansible-vault decrypt `
                     --vault-password-file=./vault_password_provider.py `
@@ -357,6 +399,7 @@ docker container run `
 docker container run `
                  --rm `
                  -v E:/Satrapu/Programming/Ansible/ansible-vault-on-windows:/opt/ansible-playbooks `
+                 -v E:/Satrapu/Programming/Ansible/ansible-vault-password:/opt/ansible-vault-password `
                  satrapu/ansible-alpine-apk:2.4.1.0-r0 `
                  ansible-vault view `
                     --vault-password-file=./vault_password_provider.py `
@@ -372,10 +415,13 @@ docker container run `
 * Run Ansible playbook:  
 {% raw %}
 ````powershell
+# Replace <YOUR_ADMIN_USERS> placeholder with the Windows user name used for creating ansible-vault VM.
 # Tip: Increase the verbosity of the ansible-playbook output by adding "-vvv" option at the end of the below line
 docker container run `
                  --rm `
                  -v E:/Satrapu/Programming/Ansible/ansible-vault-on-windows:/opt/ansible-playbooks `
+                 -v E:/Satrapu/Programming/Ansible/ansible-vault-password:/opt/ansible-vault-password `
+                 -v C:/Users/<YOUR_ADMIN_USERS>/.docker/machine/machines/ansible-vault:/opt/docker-machine/ansible-vault `
                  satrapu/ansible-alpine-apk:2.4.1.0-r0 `
                  ansible-playbook `
                     --inventory-file=local `
@@ -422,3 +468,9 @@ docker container run `
 * [Docker Machine command-line reference](https://docs.docker.com/machine/reference/)
 * [boot2docker](http://boot2docker.io/)  
 * [Tiny Core Linux](http://www.tinycorelinux.net/)  
+* Ansible modules
+  * [easy_install](http://docs.ansible.com/ansible/latest/modules/easy_install_module.html)
+  * [pip](http://docs.ansible.com/ansible/latest/modules/pip_module.html)
+  * [docker_login](http://docs.ansible.com/ansible/latest/modules/docker_login_module.html)
+  * [docker_image](http://docs.ansible.com/ansible/latest/modules/docker_image_module.html)
+  * [docker_container](http://docs.ansible.com/ansible/latest/modules/docker_container_module.html)
