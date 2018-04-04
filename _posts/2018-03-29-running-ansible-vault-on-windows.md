@@ -19,7 +19,7 @@ tags: [programming, ansible, ansible-vault, docker, docker-machine, hyper-v, boo
 
 <h2 id="context">Context</h2>  
 
-After having successfully run Ansible on Windows using Docker, as documented inside my previous [post](http://crossprogramming.com/2018/02/15/running-ansible-on-windows.html), I thought about documenting how to use [Ansible Vault](https://docs.ansible.com/ansible/latest/vault.html) on Windows.  
+After having successfully run Ansible on Windows using Docker, as documented inside my previous [post](http://crossprogramming.com/2018/02/14/running-ansible-on-windows.html), I thought about documenting how to use [Ansible Vault](https://docs.ansible.com/ansible/latest/vault.html) on Windows.  
 This tool was included in Ansible since version 1.5 and its purpose is to ensure sensitive data like credentials, private keys, certificates, etc., used by Ansible playbooks, are stored encrypted.  
 This post will present my approach for running Ansible Vault on Windows using Docker, along with the issues I have encountered and their fixes.  
 
