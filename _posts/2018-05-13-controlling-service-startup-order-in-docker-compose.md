@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Controlling service startup order in Docker Compose"
-date: 2018-05-12 23:55:29 +0300
+date: 2018-05-13 16:02:29 +0300
 tags: [programming, docker, docker-compose, docker-healthcheck, jq, windows]
 ---
 - [Context](#context)
