@@ -25,7 +25,7 @@ On the other hand, just because the database service was started before applicat
 
 In this post I will present several approaches inspired by the official [recommendations](https://docs.docker.com/compose/startup-order/) and other sources.
 Each approach will use its own compose file and each of these compose files contains at least 2 services: a Java 8 console application and a MySQL v5.7 database; the former will connect to the latter using [plain-old JDBC](https://docs.oracle.com/javase/tutorial/jdbc/basics/connecting.html), will read some [metadata](https://en.wikipedia.org/wiki/Information_schema) and then will print them to the console.  
-All compose files will use the same Java application [Docker image](FIXME: Dockerfile-jdbc-with-docker-console-runner).  
+All compose files will use the same Java application [Docker image](https://github.com/satrapu/jdbc-with-docker/blob/master/Dockerfile-jdbc-with-docker-console-runner).  
 
 There is also a bonus section at the [end](#bonus) of this post, so please check it out too!
 
@@ -96,7 +96,7 @@ mvn `
 ;docker-compose --file docker-compose-using-healthcheck.yml up
 ```` 
 
-Starting with [version 1.12](https://docs.docker.com/release-notes/docker-engine/#1120-2016-07-28), Docker has added the [HEALTHCHECK](https://docs.docker.com/engine/reference/builder/#healthcheck) Dockerfile instruction used for verifying whether a container is still working; Docker Compose file has added support for using the health check when expressing a service dependency since version 2.1, as documented inside the [compatibility matrix](https://docs.docker.com/compose/compose-file/compose-versioning/#compatibility-matrix).  
+Starting with version [1.12](https://docs.docker.com/release-notes/docker-engine/#1120-2016-07-28), Docker has added the [HEALTHCHECK](https://docs.docker.com/engine/reference/builder/#healthcheck) Dockerfile instruction used for verifying whether a container is still working; Docker Compose file has added support for using the health check when expressing a service dependency since version 2.1, as documented inside the [compatibility matrix](https://docs.docker.com/compose/compose-file/compose-versioning/#compatibility-matrix).  
 
 My database service will define its [health check](https://docs.docker.com/compose/compose-file/compose-file-v2/#healthcheck) as a My SQL client command which will periodically query whether the underlying MySQL database is ready to handle incoming connections via the [USE](https://dev.mysql.com/doc/refman/5.7/en/use.html) SQL statement:
 ````yml
@@ -133,7 +133,8 @@ app:
 As you can see, stating the dependency between db and app services is pretty easy, same as doing a health check. Even better, these things are built-in Docker Compose.  
 
 And now the __bad__ news: since Docker Compose file format is used by Docker Swarm too, the development team has decided to mark this feature as obsolete starting with compose file v3, as documented [here](https://docs.docker.com/compose/compose-file/#depends_on); see more reasoning behind this decision [here](https://github.com/docker/compose/issues/4305#issuecomment-276527457).  
-The depends_on, condition and service_healthy are usable only when using older compose file versions (e.g. v2.1, v2.2, v2.3 or v2.4). Keep in mind Docker Compose might remove support for these versions in a future release, but as long as you're OK with using compose file versions before v3, this solution is very simple to understand and use.
+The depends_on, condition and service_healthy are usable only when using older compose file versions (v2.1 up to and including v2.4).  
+Keep in mind Docker Compose might remove support for these versions in a future release, but as long as you're OK with using compose file versions before v3, this solution is very simple to understand and use.
 
 <h2 id="port-checking">Solution #2: Port checking with a twist</h2>
 This solution uses this Docker compose file: __[docker-compose-using-port-checking.yml](https://github.com/satrapu/jdbc-with-docker/blob/master/docker-compose-using-port-checking.yml)__.  
@@ -146,7 +147,7 @@ mvn `
 ;docker-compose --file docker-compose-using-port-checking.yml up app
 ```` 
 
-This solution was inspired by [one](https://8thlight.com/blog/dariusz-pasciak/2016/10/17/docker-compose-wait-for-dependencies.html) of Dariusz Pasciak's articles, but I'm not just checking whether MySQL port 3306 is open (*port checking*), as Dariusz is doing: I'm running the aforementioned SQL statement using a MySQL client found inside the __check_db_connectivity__ compose service to ensure the underlying database can handle incoming connections (*the twist*).   
+This solution was inspired by [one](https://8thlight.com/blog/dariusz-pasciak/2016/10/17/docker-compose-wait-for-dependencies.html) of Dariusz Pasciak's articles, but I'm not just checking whether MySQL port 3306 is open (*port checking*), as Dariusz is doing: I'm running the aforementioned USE SQL statement using a MySQL client found inside the __check_db_connectivity__ compose service to ensure the underlying database can handle incoming connections (*the twist*).   
 
 * Docker Compose will try starting check_db_connectivity service, but it will see that it has a dependency on db service:
  
@@ -236,7 +237,7 @@ Since *condition* form of *depends_on* will be gone sooner or later, I thought a
 My approach is to periodically query the health state of the database service from within the application service entry point by making an HTTP request to the Docker API endpoint and parse the response using [jq](https://stedolan.github.io/jq/), a command-line JSON processor; the Java application will start as soon as the database service has reached the "healthy" state.  
 
 First, I will get the JSON document containing information about all running containers via a simple [curl](https://curl.haxx.se/docs/manpage.html) command. The special thing is to use the [unix-socket](https://curl.haxx.se/docs/manpage.html#--unix-socket) curl option, since this kind of socket is used by Docker daemon.  
-Additionally, I need to expose the __[docker.sock](https://docs.docker.com/engine/reference/commandline/dockerd/#examples)__ as a volume to the container running curl command to allow it communicate with the local Docker daemon.
+Additionally, I need to expose the [docker.sock](https://docs.docker.com/engine/reference/commandline/dockerd/#examples) as a volume to the container running curl command to allow it communicate with the local Docker daemon.
 
 __IMPORTANT__  
 Sharing your local Docker daemon socket should be done with care, as it *can* lead to security issues, as very clearly presented [here](https://www.ctl.io/developers/blog/post/tutorial-understanding-the-security-risks-of-running-docker-containers), so carefully consider all things *before* using this approach!  
@@ -346,17 +347,17 @@ The good news is that there are many options, you just need to identify which on
 
 <h2 id="bonus">Bonus</h2>  
 
-While working on the Java console application, I have encountered several challenges and I thought I should also mention them here, along with their solutions, as this may help others.
+While working on the Java console application, I have encountered several challenges and I thought I should also mention them here, along with their solutions, as this may help others too.
 
 <h3 id="maven_assembly_plugin">Maven Assembly plugin</h3>  
 
 Adding a dependency in a Maven pom.xml file is ~~trivial~~[well documented](https://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html#Importing_Dependencies), but then you need to ensure that the dependency JAR file(s) will be correctly packaged with your console application.  
 One way of packing all files in one JAR is using [Maven Assembly plugin](http://maven.apache.org/plugins/maven-assembly-plugin/) and use its [assembly:single](http://maven.apache.org/plugins/maven-assembly-plugin/single-mojo.html) goal, like I [did](https://github.com/satrapu/jdbc-with-docker/blob/master/pom.xml#L31).  
-Running this goal will create an *jdbc-with-docker-jar-with-dependencies.jar* file under the *./target* folder instead if the usual *jdbc-with-docker.jar*, that's why I'm [renaming](https://github.com/satrapu/jdbc-with-docker/blob/master/Dockerfile-jdbc-with-docker-console-runner#L5) the JAR file inside the Dockerfile using a shorter name.
+Running this goal will create an *jdbc-with-docker-jar-with-dependencies.jar* file under the *./target* folder instead if the usual *jdbc-with-docker.jar*, that's why I'm [renaming](https://github.com/satrapu/jdbc-with-docker/blob/master/Dockerfile-jdbc-with-docker-console-runner#L5) the JAR file inside the Dockerfile to a shorter name.
 
 <h3 id="debug_dockerized_java_app">Debug dockerized Java application</h3>  
 
-Debugging a Java process means launching the process with several debugging related [parameters](https://docs.oracle.com/javase/8/docs/technotes/guides/jpda/conninv.html#Invocation.  
+Debugging a Java process means launching the process with several debugging related [parameters](https://docs.oracle.com/javase/8/docs/technotes/guides/jpda/conninv.html#Invocation).  
 Two of these parameters are crucial for debugging:
 * *address*, representing the port where the JVM listens for a debugger; the same port must be configured on IDE side when starting the debug session
 * *suspend*, which specifies whether the JVM should block and wait until a debugger is attached
