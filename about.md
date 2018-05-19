@@ -21,4 +21,4 @@ and is hosted by [GitHub Pages](https://pages.github.com/).
 
 My editing tools:
 * [Visual Studio Code](https://code.visualstudio.com/) with [Markdown All in One](https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one) extension for writing and previewing Markdown code
-* [bretfisher/jekyll-serve](https://github.com/BretFisher/jekyll-serve#getting-started) Docker image for locally running my site
+* [bretfisher/jekyll-serve](https://github.com/BretFisher/jekyll-serve#getting-started) Docker image for locally running this blog
