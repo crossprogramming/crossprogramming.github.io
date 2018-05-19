@@ -18,8 +18,10 @@ layout: default
             {% assign tags = page.tags %}
         {% endif %}
         
-        {% for tag in tags %}
-            <a href="{{site.baseurl}}/tags/#{{tag|slugize}}">{{tag}}</a>
+        {% assign sorted_post_tags = tags | sort %}
+
+        {% for tag in sorted_post_tags %}
+            <a href="{{ site.baseurl }}/tags/#{{ tag | slugize }}">{{ tag }}</a>
         {% unless forloop.last %}&nbsp;{% endunless %}
         {% endfor %}
     </div>
