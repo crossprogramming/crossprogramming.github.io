@@ -363,7 +363,7 @@ Two of these parameters are crucial for debugging:
 * *suspend*, which specifies whether the JVM should block and wait until a debugger is attached
 
 Since I'm using Visual Studio Code for developing this particular Java application, I need to create a debug configuration and set the port which is specified inside the .env file via key *java_debug_port* (e.g. java_debug_port=9876).  
-On the other hand, since the application will run inside a container, the port is found inside the container and it needs to be published to the Docker host where the IDE is running to.   
+On the other hand, since the application will run inside a container, this port needs to be published to the Docker host where the IDE is running on.   
 
 Launch the application and see the JVM waiting for a debugger:
 ````powershell
