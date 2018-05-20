@@ -143,11 +143,12 @@ Run it using the following commands:
 mvn `
 ;docker-compose --file docker-compose-using-port-checking.yml down --rmi local  `
 ;docker-compose --file docker-compose-using-port-checking.yml build `
-;docker-compose --file docker-compose-using-port-checking.yml up check_db_connectivity `
-;docker-compose --file docker-compose-using-port-checking.yml up app
+;docker-compose --file docker-compose-using-port-checking.yml up --exit-code-from check_db_connectivity check_db_connectivity `
+;if ($LASTEXITCODE -eq 0) { docker-compose --file docker-compose-using-port-checking.yml up app } `
+else { echo "ERROR: Failed to start service due to one of its dependencies!" }
 ```` 
 
-This solution was inspired by [one](https://8thlight.com/blog/dariusz-pasciak/2016/10/17/docker-compose-wait-for-dependencies.html) of Dariusz Pasciak's articles, but I'm not just checking whether MySQL port 3306 is open (*port checking*), as Dariusz is doing: I'm running the aforementioned USE SQL statement using a MySQL client found inside the __check_db_connectivity__ compose service to ensure the underlying database can handle incoming connections (*the twist*).   
+This solution was inspired by [one](https://8thlight.com/blog/dariusz-pasciak/2016/10/17/docker-compose-wait-for-dependencies.html) of Dariusz Pasciak's articles, but I'm not just checking whether MySQL port 3306 is open (*port checking*), as Dariusz is doing: I'm running the aforementioned USE SQL statement using a MySQL client found inside the __check_db_connectivity__ compose service to ensure the underlying database can handle incoming connections (*the twist*); additionally, the exit code of the check_db_connectivity service will be evaluated due to the *--exit-code-from check_db_connectivity* compose option and if different than 0 (which marks the db service is in desired ready state), an error message will be printed and app service will not start.
 
 * Docker Compose will try starting check_db_connectivity service, but it will see that it has a dependency on db service:
  
