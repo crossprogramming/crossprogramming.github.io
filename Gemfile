@@ -1,13 +1,16 @@
+# The gem versions present inside this file should match GitHub Pages dependency versions
+# listed here: https://pages.github.com/versions/
+
 source "https://rubygems.org"
 ruby RUBY_VERSION
 
-# This will help ensure the proper Jekyll version is running.
+# Specify Jekyll version to run
 gem "jekyll", "3.7.4"
 
-# This is the default theme for new Jekyll sites. You may change this to anything you like.
+# Specify Jekyll theme gem to use
 gem "minima", "2.5.0"
 
-# If you have any plugins, put them here!
+# List Jekyll plugins
 group :jekyll_plugins do
    gem "jekyll-feed", "0.11.0"
 end
