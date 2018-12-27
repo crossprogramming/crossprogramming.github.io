@@ -20,5 +20,7 @@ This blog was built using [Jekyll](https://jekyllrb.com/) static site generator
 and is hosted by [GitHub Pages](https://pages.github.com/).  
 
 My editing tools:
-* [Visual Studio Code](https://code.visualstudio.com/) with [Markdown All in One](https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one) extension for writing and previewing Markdown code
+* [Visual Studio Code](https://code.visualstudio.com/) with several extensions:
+  * [Markdown All in One](https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one) for writing and previewing Markdown code
+  * [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker) for spelling purposes
 * [bretfisher/jekyll-serve](https://github.com/BretFisher/jekyll-serve#getting-started) Docker image for locally running this blog
