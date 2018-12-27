@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Logging HTTP context in ASP.NET Core"
-date: 2018-12-20 00:12:24 +0200
+date: 2018-12-27 20:15:24 +0200
 tags: [programming, dotnet, dotnet-core, aspnet-core, aspnet-core-middleware, log4net, logging]
 ---
 
