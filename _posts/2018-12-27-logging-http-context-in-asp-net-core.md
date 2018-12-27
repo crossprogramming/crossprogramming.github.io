@@ -426,7 +426,7 @@ public string ToLogMessage(HttpResponse httpResponse)
 
 <h3 id="how-to-log">How to log</h3>
 The __LoggingMiddleware__ class must read both HTTP request and response in order to log them and must ensure that it will do these things without affecting any following middleware which might also need to read them too.
-Both [HttpRequest.Body](https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.http.httprequest.body?view=aspnetcore-2.1) and [HttpResponse.Body](https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.http.httpresponse.body?view=aspnetcore-2.1) properties are streams which once read, cannot be reset to their initial position; this means that once a middleware has read the content of the stream of these properties, the following ones will have nothing to read from.  
+Both [HttpRequest.Body](https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.http.httprequest.body?view=aspnetcore-2.1) and [HttpResponse.Body](https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.http.httpresponse.body?view=aspnetcore-2.1) properties are streams which once read, cannot be reset to their initial position; this means that once a middleware has read the stream of any of these properties, the following middleware will have nothing to read from.  
 In order to bypass this problem, one can use the [EnableRewind method](https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.http.internal.bufferinghelper.enablerewind?view=aspnetcore-2.1) against the HTTP request and replace the response body stream with a seekable one.
 
 Enable rewinding the HTTP request stream:
