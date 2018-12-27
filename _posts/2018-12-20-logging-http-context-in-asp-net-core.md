@@ -22,7 +22,7 @@ tags: [programming, dotnet, dotnet-core, aspnet-core, aspnet-core-middleware, lo
 * * * 
 
 <h2 id="context">Context</h2>  
-Logging is an important feature each application __must__ have. When deploying a multi-threaded and multi-user application in production, logging becomes __crucial__, as it tends to be the go-to approach for understanding what has happened in case of a production error - I'm not saying this is the *best* way, just the most *common* I've seen. To have a complete picture over an application running in production, logging should be accompanied by __monitoring__ (e.g. [Prometheus](https://prometheus.io/)) and a __centralized log aggregation solution__ (e.g. [ELK stack](https://www.elastic.co/elk-stack) or [EFK stack](https://www.digitalocean.com/community/tutorials/elasticsearch-fluentd-and-kibana-open-source-log-search-and-visualization)).
+Logging is an important feature each application __must__ have. When deploying a multi-threaded and multi-user application in production, logging becomes __crucial__, as it tends to be the go-to approach for understanding what has happened in case of a production error - I'm not saying this is the *best* way, just the most *common* one I've seen. To have a complete picture over an application running in production, logging should be accompanied by __monitoring__ (e.g. [Prometheus](https://prometheus.io/), etc.) and a __centralized log aggregation solution__ (e.g. [ELK stack](https://www.elastic.co/elk-stack), [EFK stack](https://www.digitalocean.com/community/tutorials/elasticsearch-fluentd-and-kibana-open-source-log-search-and-visualization), etc.).
 
 The purpose of this article is to explain how to log the HTTP requests and responses handled by an ASP.NET Core web application using Log4Net. The application is based on one of the official ASP.NET Core tutorials, [Create a web API with ASP.NET Core MVC](https://docs.microsoft.com/en-us/aspnet/core/tutorials/first-web-api?view=aspnetcore-2.2&tabs=visual-studio).  
 The source code is hosted on [GitHub](https://github.com/satrapu/aspnet-core-logging), while the automatic builds are provided by [Azure DevOps](https://dev.azure.com/satrapu/aspnet-core-logging/_build?definitionId=2&_a=summary).
@@ -69,7 +69,7 @@ By default, when instantiating a web host builder via the [WebHost.CreateDefault
 * Debug - found inside [Microsoft.Extensions.Logging.Debug](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Debug) NuGet package
 * Event Source - found inside [Microsoft.Extensions.Logging.EventSource](https://www.nuget.org/packages/Microsoft.Extensions.Logging.EventSource) NuGet package
 
-Here's the code fragment used for configuring these loggiong proivders (as seen inside the decompiled code):
+Here's the code fragment used for configuring these logging providers (as seen inside the decompiled code):
 ```cs
 namespace Microsoft.AspNetCore
 {
@@ -235,7 +235,7 @@ public IList<TodoItem> GetAll()
 ```  
 
 <h2 id="logging-the-current-http-context">Logging the current HTTP context</h2>
-One of the best ways offered by ASP.NET Core to handle the current HTTP context and manipulate it is via [middlewares](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-2.2).  
+One of the best ways offered by ASP.NET Core to handle the current HTTP context and manipulate it it's via a [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-2.2).  
 The [middleware](https://github.com/satrapu/aspnet-core-logging/blob/master/Sources/TodoWebApp/Logging/LoggingMiddleware.cs) found inside this particular web application will check whether a particular HTTP context must be logged and exactly what to log via several of its dependencies - to be more exact 2 interfaces - since deciding [when to log](https://github.com/satrapu/aspnet-core-logging/blob/master/Sources/TodoWebApp/Logging/IHttpContextLoggingHandler.cs) should not depend on [what and how to log](https://github.com/satrapu/aspnet-core-logging/blob/master/Sources/TodoWebApp/Logging/IHttpObjectConverter.cs).  
 The middleware constructor looks like this:
 ```cs
@@ -298,7 +298,7 @@ Content-Type: application/json; charset=utf-8
 --- REQUEST 0HLJ82DDDSHQS: END ---
 ```
 
-The accompanying __HTTP reponse__ log message looks like this:
+The accompanying __HTTP response__ log message looks like this:
 ```
 2018-12-26 18:18:58,323 [11] DEBUG TodoWebApp.Logging.LoggingMiddleware 
  --- RESPONSE 0HLJ82DDDSHQS: BEGIN ---
@@ -311,7 +311,7 @@ Content-Type: application/json; charset=utf-8
 <h3 id="correlation-id">Correlation identifier</h3>
 The __0HLJ82DDDSHQS__ string represents the so called *[correlation identifier](https://www.enterpriseintegrationpatterns.com/patterns/messaging/CorrelationIdentifier.html)*, which helps in understanding the user journeys inside the application.  
 An HTTP request and its accompanying response will use the same correlation identifier; furthermore, any log message related to this pair should use this identifier too.  
-ASP.NET Core offers such correlation identifiers via the [HttpContext.TraceIdentifier](https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.http.httpcontext.traceidentifier?view=aspnetcore-2.1) property, available on both the current HTTP request (the __HttpRequest.HttpContext.TraceIdentifier__ property) and response (the __HttpResponse.HttpContext.TraceIdentifier__ poperty).
+ASP.NET Core offers such correlation identifiers via the [HttpContext.TraceIdentifier](https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.http.httpcontext.traceidentifier?view=aspnetcore-2.1) property, available on both the current HTTP request (the __HttpRequest.HttpContext.TraceIdentifier__ property) and response (the __HttpResponse.HttpContext.TraceIdentifier__ property).
 
 <h2 id="implementation">Implementation</h2>  
 <h3 id="when-to-log">When to log</h3>
