@@ -7,6 +7,7 @@ baseurl: ""
 url: "https://crossprogramming.com"
 twitter_username: satrapu
 github_username: satrapu
+linkedin_username: bmarian
 google_analytics: 
 disqus:
   shortname:
@@ -14,7 +15,7 @@ disqus:
 # Build settings
 markdown: kramdown
 theme: minima
-gems:
+plugins:
   - jekyll-feed
 exclude:
   - Gemfile

@@ -4,7 +4,7 @@ title: About
 permalink: /about/
 ---
 
-Hi, my name is [Bogdan Marian](https://www.linkedin.com/in/bmarian/) aka *satrapu* and I have started this blog with
+Hi, my name is __Bogdan Marian__ aka __satrapu__ and I have started this blog with
 the intention of writing posts related to both Jesus Christ
 (who died for everyone's sins on a *cross*) and software development
 (part of the more generic *programming* term), thus resulting the
@@ -20,7 +20,9 @@ This blog was built using [Jekyll](https://jekyllrb.com/) static site generator
 and is hosted by [GitHub Pages](https://pages.github.com/).  
 
 My editing tools:
+
 * [Visual Studio Code](https://code.visualstudio.com/) with several extensions:
   * [Markdown All in One](https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one) for writing and previewing Markdown code
+  * [markdownlint](https://marketplace.visualstudio.com/items?itemName=DavidAnson.vscode-markdownlint) for checking Markdown syntax
   * [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker) for spelling purposes
 * [bretfisher/jekyll-serve](https://github.com/BretFisher/jekyll-serve#getting-started) Docker image for locally running this blog
