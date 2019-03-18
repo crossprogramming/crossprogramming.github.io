@@ -676,7 +676,12 @@ Anyway, for the sake of experimenting and out of curiosity, I have investigated 
 - task: PowerShell@2
   name: sonar_build_breaker
   displayName: Run Sonar build breaker
-  condition: and(${{ parameters.sonar.enabled }}, ${{ parameters.sonar.buildBreaker.enabled }})
+  condition: |
+    and
+    (
+      eq( ${{ parameters.sonar.enabled }}, True),
+      eq( ${{ parameters.sonar.buildBreaker.enabled }}, True)
+    )
   inputs:
     targetType: 'filePath'
     filePath: '$(Build.SourcesDirectory)/Build/SonarBuildBreaker.ps1'
