@@ -19,8 +19,7 @@ Lord and Savior is eternal.
 
 This blog was built using [Jekyll](https://jekyllrb.com/) static site generator
 and is hosted by [GitHub Pages](https://pages.github.com/).  
-
-My editing tools:
+My blogging tools:
 
 * [Visual Studio Code](https://code.visualstudio.com/) with several extensions:
   * [Markdown All in One](https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one) - used for writing and previewing Markdown code
