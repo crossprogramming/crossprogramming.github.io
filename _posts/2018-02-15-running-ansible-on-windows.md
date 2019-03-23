@@ -9,10 +9,10 @@ tags: [programming, ansible, docker, alpine, linux, windows, apk, pip, git, gith
 - [Common things](#common)
 - [Approach #1: APK](#apk)  
 - [Approach #2: PIP](#pip)  
-- [Approach #3: Sources](#sources) 
+- [Approach #3: Sources](#sources)
 - [Example](#example)
-- [Conclusion](#conclusion) 
-- [Resources](#resources) 
+- [Conclusion](#conclusion)
+- [Resources](#resources)
 
 * * *  
 
