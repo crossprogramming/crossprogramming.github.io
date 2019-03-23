@@ -3,6 +3,7 @@ layout: page
 permalink: /tags/
 title: Tags
 ---
+<!-- markdownlint-disable MD033 -->
 <div id="archives">
 
 {% assign sorted_site_tags = site.tags | sort %}
@@ -13,7 +14,7 @@ title: Tags
     {% capture tag_name %}{{ tag | first }}{% endcapture %}
 
     <div id="#{{ tag_name | slugize }}"></div>
-    
+
     <h2 class="-head">{{ tag_name }}</h2>
 
     <a name="{{ tag_name | slugize }}"></a>
