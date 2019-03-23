@@ -11,11 +11,13 @@ tags: [programming, docker, docker-compose, docker-healthcheck, jq, windows]
 - [Conclusion](#conclusion)
 - [Bonus](#bonus)
   - [Maven Assembly plugin](#maven_assembly_plugin)
-  - [Debug a dockerized Java application](#debug_dockerized_java_app) 
-- [Resources](#resources) 
+  - [Debug a dockerized Java application](#debug_dockerized_java_app)
+- [Resources](#resources)
 
-* * * 
+* * *
 
+<!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable MD036 -->
 <h2 id="context">Context</h2>  
 
 In case you're using Docker Compose for running several containers on a machine, sooner or later you'll end-up in a situation where you'll need to ensure service A runs *before* service B. The classic example is an application which needs to access a database; if both of these compose services are started via the *docker-compose up* command, there is a chance this will fail, since the application service might start before the database service and it will not find a database able to handle its SQL statements.
@@ -30,20 +32,21 @@ All compose files will use the same Java application [Docker image](https://gith
 There is also a bonus section at the [end](#bonus) of this post, so please check it out too!
 
 __IMPORTANT THINGS__
-* My environment
-  *  Windows 10 x64 Pro
-  *  Docker v18.03.1-ce-win65 (17513)
-  *  Docker Compose v1.21.1, build 7641a569
-*  The source code used by this post can be found on [GitHub](https://github.com/satrapu/jdbc-with-docker)
-* All commands below must be executed from a Powershell console run as admin
-* Also, since I'm lazy, I have embedded Linux shell commands inside the Docker Compose files, which is most definately not a best practice, but since the point of this post is service startup order and not Docker Compose file best practices, please endure
-* I'm using "mvn", "[docker-compose down](https://docs.docker.com/compose/reference/down/)" and "[docker-compose build](https://docs.docker.com/compose/reference/build/)" commands before starting any compose service via "[docker-compose up](https://docs.docker.com/compose/reference/up/)" to ensure:
-  *  I will run the lastest build of the Java application using [default](http://www.adam-bien.com/roller/abien/entry/configuring_default_goal_in_maven) Maven goal; in my case this is: *clean compile assembly:single*
-  *  Any running compose service will be stopped
-  *  Any Docker image declared in the compose file will be rebuilt
-* The aforementioned compose files make use of variables declared in a [.env](https://docs.docker.com/compose/env-file/) file, with the following content:
 
-````ini
+- My environment
+  - Windows 10 x64 Pro
+  - Docker v18.03.1-ce-win65 (17513)
+  - Docker Compose v1.21.1, build 7641a569
+- The source code used by this post can be found on [GitHub](https://github.com/satrapu/jdbc-with-docker)
+- All commands below must be executed from a Powershell console run as admin
+- Also, since I'm lazy, I have embedded Linux shell commands inside the Docker Compose files, which is most definitely not a best practice, but since the point of this post is service startup order and not Docker Compose file best practices, please endure
+- I'm using "mvn", "[docker-compose down](https://docs.docker.com/compose/reference/down/)" and "[docker-compose build](https://docs.docker.com/compose/reference/build/)" commands before starting any compose service via "[docker-compose up](https://docs.docker.com/compose/reference/up/)" to ensure:
+- I will run the latest build of the Java application using [default](http://www.adam-bien.com/roller/abien/entry/configuring_default_goal_in_maven) Maven goal; in my case this is: *clean compile assembly:single*
+  - Any running compose service will be stopped
+  - Any Docker image declared in the compose file will be rebuilt
+- The aforementioned compose files make use of variables declared in a [.env](https://docs.docker.com/compose/env-file/) file, with the following content:
+
+```ini
 mysql_root_password=<ENTER_A_PASSWORD_HERE>
 
 mysql_database_name=jdbcwithdocker
@@ -53,11 +56,11 @@ mysql_database_password=<ENTER_A_DIFFERENT_PASSWORD_HERE>
 java_jvm_flags=-Xmx512m
 java_debug_port=9876
 
-# Use "suspend=y" to ensure the JVM will pause the application, 
+# Use "suspend=y" to ensure the JVM will pause the application,
 # waiting for a debugger to be attached
 java_debug_settings=-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=9876
 
-# The amount of time between two consecutive health state checks 
+# The amount of time between two consecutive health state checks
 # (used by docker-compose-using-healthcheck.yml)
 healthcheck_interval=2s
 
@@ -65,7 +68,7 @@ healthcheck_interval=2s
 # (used inside docker-compose-using-healthcheck.yml)
 healthcheck_timeout=5s
 
-# The maximum amount of retries before giving up and considering 
+# The maximum amount of retries before giving up and considering
 # the Docker container in an unhealthy state
 # (used by docker-compose-using-port-checking.yml and docker-compose-using-api.yml)
 healthcheck_retries=20
@@ -74,7 +77,7 @@ healthcheck_retries=20
 # (used by docker-compose-using-port-checking.yml)
 check_db_connectivity_interval=2s
 
-# The maximum amount of retries before giving up and considering 
+# The maximum amount of retries before giving up and considering
 # the database is not able to process incoming connections
 # (used by docker-compose-using-port-checking.yml)
 check_db_connectivity_retries=20
@@ -82,24 +85,26 @@ check_db_connectivity_retries=20
 # The Docker API version to use when querying for container metadata
 # (used by docker-compose-using-api.yml)
 docker_api_version=1.37
-````
+```
 
 Since the .env file contains sensitive things like database passwords, it should not be put under source control.  
 
 <h2 id="service_healthy">Solution #1: Use depends_on, condition and service_healthy</h2>  
 This solution uses this Docker compose file: __[docker-compose-using-healthcheck.yml](https://github.com/satrapu/jdbc-with-docker/blob/master/docker-compose-using-healthcheck.yml)__.  
 Run it using the following commands:
-````powershell
+
+```powershell
 mvn `
 ;docker-compose --file docker-compose-using-healthcheck.yml down --rmi local `
 ;docker-compose --file docker-compose-using-healthcheck.yml build `
 ;docker-compose --file docker-compose-using-healthcheck.yml up
-```` 
+```
 
 Starting with version [1.12](https://docs.docker.com/release-notes/docker-engine/#1120-2016-07-28), Docker has added the [HEALTHCHECK](https://docs.docker.com/engine/reference/builder/#healthcheck) Dockerfile instruction used for verifying whether a container is still working; Docker Compose file has added support for using the health check when expressing a service dependency since version 2.1, as documented inside the [compatibility matrix](https://docs.docker.com/compose/compose-file/compose-versioning/#compatibility-matrix).  
 
 My database service will define its [health check](https://docs.docker.com/compose/compose-file/compose-file-v2/#healthcheck) as a My SQL client command which will periodically query whether the underlying MySQL database is ready to handle incoming connections via the [USE](https://dev.mysql.com/doc/refman/5.7/en/use.html) SQL statement:
-````yml
+
+```yml
 ...
 db:
     image: mysql:5.7.20
@@ -114,12 +119,13 @@ db:
       timeout: ${healthcheck_timeout}
       retries: ${healthcheck_retries}
 ...
-````
+```
 
 Keep in mind USE statement is not the only way of performing such check. For instance, one could periodically run a SQL script which would test whether the database is accessible *and* that the database user has been granted all the expected permissions (e.g. can perform INSERT against a particular table, etc.).  
 
 My application service will be [started](https://docs.docker.com/compose/compose-file/compose-file-v2/#depends_on) as soon as the database service has reached the "healthy" state:
-````yml
+
+```yml
 ...
 app:
     image: satrapu/jdbc-with-docker-console-runner
@@ -128,7 +134,7 @@ app:
       db:
         condition: service_healthy
 ...
-````
+```
 
 As you can see, stating the dependency between db and app services is pretty easy, same as doing a health check. Even better, these things are built-in Docker Compose.  
 
@@ -139,20 +145,21 @@ Keep in mind Docker Compose might remove support for these versions in a future 
 <h2 id="port-checking">Solution #2: Port checking with a twist</h2>
 This solution uses this Docker compose file: __[docker-compose-using-port-checking.yml](https://github.com/satrapu/jdbc-with-docker/blob/master/docker-compose-using-port-checking.yml)__.  
 Run it using the following commands:
-````powershell
+
+```powershell
 mvn `
 ;docker-compose --file docker-compose-using-port-checking.yml down --rmi local  `
 ;docker-compose --file docker-compose-using-port-checking.yml build `
 ;docker-compose --file docker-compose-using-port-checking.yml up --exit-code-from check_db_connectivity check_db_connectivity `
 ;if ($LASTEXITCODE -eq 0) { docker-compose --file docker-compose-using-port-checking.yml up app } `
 else { echo "ERROR: Failed to start service due to one of its dependencies!" }
-```` 
+```
 
 This solution was inspired by [one](https://8thlight.com/blog/dariusz-pasciak/2016/10/17/docker-compose-wait-for-dependencies.html) of Dariusz Pasciak's articles, but I'm not just checking whether MySQL port 3306 is open (*port checking*), as Dariusz is doing: I'm running the aforementioned USE SQL statement using a MySQL client found inside the __check_db_connectivity__ compose service to ensure the underlying database can handle incoming connections (*the twist*); additionally, the exit code of the check_db_connectivity service will be evaluated due to the *--exit-code-from check_db_connectivity* compose option and if different than 0 (which marks the db service is in desired ready state), an error message will be printed and app service will not start.
 
-* Docker Compose will try starting check_db_connectivity service, but it will see that it has a dependency on db service:
- 
-  ````yml
+- Docker Compose will try starting check_db_connectivity service, but it will see that it has a dependency on db service:
+
+  ```yml
   ...
    db:
       image: mysql:5.7.20
@@ -162,11 +169,13 @@ This solution was inspired by [one](https://8thlight.com/blog/dariusz-pasciak/20
       depends_on:
         - db
   ...
-  ````
-* Docker Compose will start db service
-* Docker Compose will then start check_db_connectivity service, which will initiate a loop checking that the MySQL database can handle incoming connections
-* Docker Compose will wait for check_db_connectivity service to finish its loop, as the loop is part of the service [entry point](https://docs.docker.com/compose/compose-file/#entrypoint):
-  ````yml
+  ```
+
+- Docker Compose will start db service
+- Docker Compose will then start check_db_connectivity service, which will initiate a loop checking that the MySQL database can handle incoming connections
+- Docker Compose will wait for check_db_connectivity service to finish its loop, as the loop is part of the service [entry point](https://docs.docker.com/compose/compose-file/#entrypoint):
+
+  ```yml
   check_db_connectivity:
     image: activatedgeek/mysql-client:0.1
     entrypoint: >
@@ -180,7 +189,7 @@ This solution was inspired by [one](https://8thlight.com/blog/dariusz-pasciak/20
 
         while [ $$currentAttempt -le $$totalAttempts ]; do
           sleep $$sleepingTime
-          
+
           mysql \
             --host='db' \
             --port='3306' \
@@ -199,37 +208,41 @@ This solution was inspired by [one](https://8thlight.com/blog/dariusz-pasciak/20
 
         echo 'ERROR: Could not connect to MySQL database \"${mysql_database_name}\" in due time.'
         return 1"
-  ````
-* Docker Compose will then start app service; by the time this service is running, the MySQL database is able to handle incoming connections
-  ````yml
+  ```
+
+- Docker Compose will then start app service; by the time this service is running, the MySQL database is able to handle incoming connections
+
+  ```yml
     app:
       image: satrapu/jdbc-with-docker-console-runner
       depends_on:
         - db
-  ````
+  ```
 
 This solution is similar with the [previous one](#service_healthy) in the sense that the application service waits till the database service enters a specific state, but then without using a Docker Compose obsolete feature.
 
 <h2 id="docker_engine_api">Solution #3: Invoke Docker Engine API</h2>
 This solution uses this Docker compose file: __[docker-compose-using-api.yml](https://github.com/satrapu/jdbc-with-docker/blob/master/docker-compose-using-api.yml)__.  
 Run it using the following commands:
-````powershell
+```powershell
 $Env:COMPOSE_CONVERT_WINDOWS_PATHS=1 `
 ;mvn `
 ;docker-compose --file docker-compose-using-api.yml down --rmi local  `
 ;docker-compose --file docker-compose-using-api.yml build `
 ;docker-compose --file docker-compose-using-api.yml up
-````  
+```  
 
 __IMPORTANT__  
 Running the above commands without including __COMPOSE_CONVERT_WINDOWS_PATHS__ environment variable will fail:  
-````powershell
+
+```powershell
 ...
 Creating jdbc-with-docker_app_1 ... error
 
 ERROR: for jdbc-with-docker_app_1  Cannot create container for service app: b'Mount denied:\nThe source path "\\\\var\\\\run\\\\docker.sock:/var/run/docker.sock"\nis not a valid Windows path'
 ...
-````
+```
+
 This issue and its fix are documented [here](https://github.com/docker/for-win/issues/1829#issuecomment-376328022).
 
 I really like the idea of expressing dependencies between compose services via health checks.  
@@ -244,7 +257,8 @@ __IMPORTANT__
 Sharing your local Docker daemon socket should be done with care, as it *can* lead to security issues, as very clearly presented [here](https://www.ctl.io/developers/blog/post/tutorial-understanding-the-security-risks-of-running-docker-containers), so carefully consider all things *before* using this approach!  
 
 Now that the security ad has been played, below you may find an example of what the stand-alone command used for listing all Docker containers running on the local host would look like - please note I'm running curl from within a Docker container, [byrnedo/alpine-curl](https://hub.docker.com/r/byrnedo/alpine-curl/), while the actual command is executed from a container based on [openjdk:8-jre-alpine](https://hub.docker.com/_/openjdk/) Docker image:
-````powershell
+
+```powershell
 # Ensure db service is running before querying its metadata
 docker-compose --file docker-compose-using-api.yml up -d db `
 ;docker container run `
@@ -254,9 +268,11 @@ docker-compose --file docker-compose-using-api.yml up -d db `
           --silent `
           --unix-socket /var/run/docker.sock `
           http://v1.37/containers/json
- ````
+ ```
+
  The output would look similar to this:
- ````json
+
+```json
  [
    ...
   [  
@@ -324,18 +340,20 @@ docker-compose --file docker-compose-using-api.yml up -d db `
    },
    ...
 ]
-````  
+```  
 
-Secondly, I will extract the health state of the database service using [various](https://stedolan.github.io/jq/manual/#Builtinoperatorsandfunctions) jq operators and functions: 
-````bash
+Secondly, I will extract the health state of the database service using [various](https://stedolan.github.io/jq/manual/#Builtinoperatorsandfunctions) jq operators and functions:
+
+```bash
 jq '.[] | select(.Names[] | contains("_db_")) | select(.State == "running") | .Status | contains("healthy")'
 
 # The output should be "true" in case the db service has reached the healthy state
-````
-* __.[]__ : this will select all records from the given JSON document
-* __select(.Names[] \| contains("\_db\_"))__ : this will select the records whose "Names" array property has a record containing the "\_db\_" string - the name of a Docker container created by Docker Compose contains the service name; in our case it is "db"
-* __select(.State == "running")__ : this will select only running Docker containers
-* __.Status \| contains("healthy")__ : this will select the value of the "Status" property, which, in case the container has reached healthy state, should be "true"  
+```
+
+- __.[]__ : this will select all records from the given JSON document
+- __select(.Names[] \| contains("\_db\_"))__ : this will select the records whose "Names" array property has a record containing the "\_db\_" string - the name of a Docker container created by Docker Compose contains the service name; in our case it is "db"
+- __select(.State == "running")__ : this will select only running Docker containers
+- __.Status \| contains("healthy")__ : this will select the value of the "Status" property, which, in case the container has reached healthy state, should be "true"  
 
 In order to reach the final jq command found inside the Docker Compose file, I have experimented using [jq Playground](https://jqplay.org/s/svMcFCRZ31).  
 Please note this is not the only way of extracting the health status out of the Docker JSON - use your imagination to come up with better jq commands.
@@ -360,14 +378,16 @@ Running this goal will create an *jdbc-with-docker-jar-with-dependencies.jar* fi
 
 Debugging a Java process means launching the process with several debugging related [parameters](https://docs.oracle.com/javase/8/docs/technotes/guides/jpda/conninv.html#Invocation).  
 Two of these parameters are crucial for debugging:
-* *address*, representing the port where the JVM listens for a debugger; the same port must be configured on IDE side when starting the debug session
-* *suspend*, which specifies whether the JVM should block and wait until a debugger is attached
+
+- *address*, representing the port where the JVM listens for a debugger; the same port must be configured on IDE side when starting the debug session
+- *suspend*, which specifies whether the JVM should block and wait until a debugger is attached
 
 Since I'm using Visual Studio Code for developing this particular Java application, I need to create a debug configuration and set the port which is specified inside the .env file via key *java_debug_port* (e.g. java_debug_port=9876).  
-On the other hand, since the application will run inside a container, this port needs to be published to the Docker host where the IDE is running on.   
+On the other hand, since the application will run inside a container, this port needs to be published to the Docker host where the IDE is running on.
 
 Launch the application and see the JVM waiting for a debugger:
-````powershell
+
+```powershell
 λ  $Env:COMPOSE_CONVERT_WINDOWS_PATHS=1 `
 >> ;mvn `
 >> ;docker-compose --file docker-compose-using-api.yml down --rmi local  `
@@ -383,16 +403,18 @@ Launch the application and see the JVM waiting for a debugger:
 # app_1  | Start checking whether MySQL database jdbcwithdocker is up & running (able to process incoming connections) each 2s for a total amount of 20 times
 # app_1  | OK: [1/20] MySQL database jdbcwithdocker is up & running.
 # app_1  | Listening for transport dt_socket at address: 9876
-````  
+```  
 
 Docker Compose can get the host port via the following command:
-````powershell
+
+```powershell
   docker-compose --file docker-compose-using-api.yml  port --protocol=tcp app 9876
   # 0.0.0.0:32809
-````
+```
 
 Visual Studio Code needs to have its debug configuration use port *32809*:
-````json
+
+```json
 {
     // Use IntelliSense to learn about possible attributes.
     // Hover to view descriptions of existing attributes.
@@ -408,10 +430,11 @@ Visual Studio Code needs to have its debug configuration use port *32809*:
         }
     ]
 }
-````  
+```  
 
 Then launch the debug configuration and see the following output generated by the Java application:
-````powershell
+
+```powershell
 ...
 app_1  | JDBC_URL="jdbc:mysql://address=(protocol=tcp)(host=db)(port=3306)/jdbcwithdocker?useSSL=false"
 app_1  |
@@ -430,16 +453,16 @@ app_1  | |        information_schema |                                          
 app_1  | --------------------------------------------------------------------------------------------------------------
 app_1  | Application was successfully able to fetch data out of the underlying database!
 jdbc-with-docker_app_1 exited with code 0
-````  
+```  
 
 <h2 id="resources">Resources</h2>  
 
-* [Docker Compose](https://github.com/docker/compose/)  
-* [Docker Compose command-line reference](https://docs.docker.com/compose/reference/)
-* [Docker Compose file reference](https://docs.docker.com/compose/compose-file/)
-* [Docker Engine API v1.37](https://docs.docker.com/engine/api/v1.37/)
-* [jq](https://stedolan.github.io/jq/)
-* [jq Manual](https://stedolan.github.io/jq/manual/)
-* [jq Playground](https://jqplay.org/)
-* [JDBC - The Java Tutorials](https://docs.oracle.com/javase/tutorial/jdbc/TOC.html)
-* [Debugging Java in VS Code](https://code.visualstudio.com/docs/languages/java#_debugging)
+- [Docker Compose](https://github.com/docker/compose/)  
+  - [Docker Compose command-line reference](https://docs.docker.com/compose/reference/)
+  - [Docker Compose file reference](https://docs.docker.com/compose/compose-file/)
+- [Docker Engine API v1.37](https://docs.docker.com/engine/api/v1.37/)
+- [jq](https://stedolan.github.io/jq/)
+  - [jq Manual](https://stedolan.github.io/jq/manual/)
+  - [jq Playground](https://jqplay.org/)
+- [JDBC - The Java Tutorials](https://docs.oracle.com/javase/tutorial/jdbc/TOC.html)
+- [Debugging Java in VS Code](https://code.visualstudio.com/docs/languages/java#_debugging)
