@@ -149,7 +149,7 @@ Containing the __hello-world.yml__ file:
 ```yaml
 ---
 # This playbook prints a simple debug message
-- name: Echo 
+- name: Echo
   hosts: 127.0.0.1
   connection: local
 
@@ -210,7 +210,7 @@ Just because a tool is not officially supported on Windows or it's *nix only, do
   * [Debug Ansible Playbooks Like A Pro](https://blog.codecentric.de/en/2017/06/debug-ansible-playbooks-like-pro/)
 * Udemy free courses  
   * [Ansible for the Absolute Beginner - Hands-On](https://www.udemy.com/learn-ansible/learn/v4/overview)  
-  * [Ansible Essentials: Simplicity in Automation](https://www.udemy.com/ansible-essentials-simplicity-in-automation/learn/v4/overview) 
+  * [Ansible Essentials: Simplicity in Automation](https://www.udemy.com/ansible-essentials-simplicity-in-automation/learn/v4/overview)
 * IDEs
   * [Atom](https://atom.io/)
     * Extensions
