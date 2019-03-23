@@ -658,7 +658,7 @@ Since the pipeline is run on several operating systems, I have disabled Sonar an
 
 ### Use SonarLint
 
-What if you'd like to know whether you changes will pass the quality gate *before* committing them? Welcome, [SonarLint](https://www.sonarlint.org/)! This __free__ tool is installed in your favorite IDE and can be connected to your SonarCloud project. For instance, check [this page](https://www.sonarlint.org/visualstudio/) for the steps needed to integrate SonarLint with Visual Studio.
+What if you'd like to know whether your changes will pass the quality gate *before* committing them? Welcome, [SonarLint](https://www.sonarlint.org/)! This __free__ tool is installed in your favorite IDE and can be connected to your SonarCloud project. For instance, check [this page](https://www.sonarlint.org/visualstudio/) for the steps needed to integrate SonarLint with Visual Studio.
 
 ### Use SonarQube build breaker
 
