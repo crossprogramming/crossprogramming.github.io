@@ -2,7 +2,7 @@
 layout: post
 title: "How did I become a software developer"
 date: 2018-08-20 00:05:33 +0200
-tags: [crossprogramming]
+tags: [aerospace-engineering, crossprogramming, computer-science, eternal-life, god, jesus-christ, salvation, sin,  transilvania-university]
 ---
 
 - [Introduction](#intro)
