@@ -70,22 +70,19 @@ On the other hand, the YAML file offers several benefits over the visual designe
   - The changes can go through an official code-review process before they impact the build
   - We can also quickly rollback to a specific version in case of a bug requiring extensive fixing
   - The code can be easily shared via a link to the hosted YAML file
-- Coolness factor - we're developers, so we get to *write code* to *build code*
+- Coolness factor - we're developers, so we get to *write code* to *build code*!
 
 ### Sign up for Azure DevOps
 
-In case you already have signed up for Azure DevOps, skip this section.  
-Follow [these steps](https://docs.microsoft.com/en-us/azure/devops/user-guide/sign-up-invite-teammates?view=azure-devops) to sign up for Azure DevOps.
+In case you already have signed up for Azure DevOps, skip this section; otherwise, follow [these steps](https://docs.microsoft.com/en-us/azure/devops/user-guide/sign-up-invite-teammates?view=azure-devops) to sign up for Azure DevOps.
 
 ### Create an Azure DevOps organization
 
-In case you already have access to such an organization, skip this section.  
-Follow [these steps](https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/create-organization?view=azure-devops) to create a new organization.
+In case you already have access to such an organization, skip this section; otherwise, follow [these steps](https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/create-organization?view=azure-devops) to create a new organization.
 
 ### Create a public project
 
-In case you already have such a project, skip this section.  
-Follow [these steps](https://docs.microsoft.com/en-us/azure/devops/organizations/public/create-public-project?view=azure-devops) to create a new public project.
+In case you already have such a project, skip this section; otherwise, follow [these steps](https://docs.microsoft.com/en-us/azure/devops/organizations/public/create-public-project?view=azure-devops) to create a new public project.
 
 ### Create pipeline
 
@@ -93,7 +90,7 @@ Follow [these steps](https://docs.microsoft.com/en-us/azure/devops/pipelines/get
 
 ### Paths in pipeline
 
-In order to correctly reference a file or folder found inside the repository or generated during the current build, use one of the following predefined variables:  
+In order to correctly reference a file or folder found inside the repository or generated during the current build, use one of the following [predefined variables](https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml):  
 
 - __$(Build.SourcesDirectory)__: the local path on the agent where your source code is downloaded
 - __$(Agent.BuildDirectory)__: the local path on the agent where all folders for a given build pipeline are created
@@ -179,7 +176,7 @@ jobs:
     sonar:
       enabled: False
       buildBreaker:
-      enabled: False
+        enabled: False
 
 - template: './azure-pipelines.job-template.yml'
   parameters:
@@ -191,7 +188,7 @@ jobs:
     sonar:
       enabled: False
       buildBreaker:
-      enabled: False
+        enabled: False
 
 - template: './azure-pipelines.job-template.yml'
   parameters:
@@ -281,15 +278,14 @@ In order to use this variable group in your pipeline, you have to link it:
 - Go to __Variables__ tab and click __Link variable groups__ button
 - Choose the appropriate group and click __Link__ button
 
-Once the variable groups has been linked to your pipeline and declared inside the pipeline YAML file, use its variables like the ordinary ones.
-Azure Pipelines offers a bunch of predefined variables - see them [here](https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml).
+Once the variable groups has been linked to your pipeline and declared inside the pipeline YAML file, use its variables like the ordinary ones.  
 
 ### Use secrets
 
 A variable group may contain variables marked as secret (click the lock icon on the right side of the appropriate variable editor found under Pipelines -> Library -> Variable Groups menu).  
 These variables may contain sensitive data like passwords, tokens, etc.; they may also be mapped to secrets stored in Azure KeyVault, as documented [here](https://docs.microsoft.com/en-us/azure/devops/pipelines/library/variable-groups?view=azure-devops&tabs=yaml#link-secrets-from-an-azure-key-vault).  
 
-The pipeline presented in this article uses a variable marked as secret for storing the token used for authenticating against the SonarCloud project.
+The pipeline presented in this article uses a variable marked as secret for storing the [token](#use-sonarcloud-token-during-build) used for authenticating against the SonarCloud project.
 
 ## Build application
 
@@ -550,7 +546,7 @@ Doing static code analysis against a .NET Core solution usually consists of:
 
 ### SonarCloud
 
-SonarCloud is *SonarQube as a Service* and it's free for open source projects, like [mine](https://github.com/satrapu/aspnet-core-logging).  
+[SonarCloud](https://sonarcloud.io/about) is *SonarQube as a Service* and it's [free](https://sonarcloud.io/about/pricing) for open source projects, like [mine](https://github.com/satrapu/aspnet-core-logging).  
 Any SonarCloud project comes with a predefined quality gate which is read-only, but you can use it as a template to create your own, as documented [here](https://sonarcloud.io/documentation/user-guide/quality-gates/).  
 SonarCloud is an active product, so expect features to pop on almost weekly basis, like this one: [Pull Requests get a real Quality Gate status](https://community.sonarsource.com/t/pull-requests-get-a-real-quality-gate-status/7814).
 
@@ -662,11 +658,11 @@ Since the pipeline is run on several operating systems, I have disabled Sonar an
 
 ### Use SonarLint
 
-What if you'd like to know whether you changes will pass the quality gate *before* committing them? Welcome, [SonarLint](https://www.sonarlint.org/)! This __free__ tool is installed in your favorite IDE and can be connected to your SonarCloud project. For instance, check [this page](https://www.sonarlint.org/visualstudio/) to know how you use SonarLint with Visual Studio.
+What if you'd like to know whether you changes will pass the quality gate *before* committing them? Welcome, [SonarLint](https://www.sonarlint.org/)! This __free__ tool is installed in your favorite IDE and can be connected to your SonarCloud project. For instance, check [this page](https://www.sonarlint.org/visualstudio/) for the steps needed to integrate SonarLint with Visual Studio.
 
 ### Use SonarQube build breaker
 
-By *build breaker* I mean the ability of failing the pipeline in case the SonarQube quality gate did not pass due to some issues like duplicated code or a security flaw. Such feature looks very appealing, but it seems there is a catch: starting with version 5.2, SonarQube asynchronously analyzes the report it receives from a scanner. Such analysis can take a while, so if a build polls SonarQube server for the results, some resources may be blocked (e.g. the machine running the build), as stated [here](https://blog.sonarsource.com/breaking-the-sonarqube-analysis-with-jenkins-pipelines/).  
+By *build breaker* I mean the ability of failing the pipeline in case the SonarQube quality gate did not pass due to some issues like duplicated code or a security flaw. Such feature looks very appealing, but it seems there is a catch: starting with [version 5.2](https://blog.sonarsource.com/sonarqube-5-2-in-screenshots/), SonarQube asynchronously analyzes the report it receives from a scanner. Such analysis can take a while, so if a build polls SonarQube server for the results, some resources may be blocked (e.g. the machine running the build), as stated [here](https://blog.sonarsource.com/breaking-the-sonarqube-analysis-with-jenkins-pipelines/).  
 
 Anyway, for the sake of experimenting and out of curiosity, I have investigated how can I implement such build breaker and I've stumbled upon a [PowerShell script](https://github.com/michaelcostabr/SonarQubeBuildBreaker/blob/master/SonarQubeBuildBreaker.ps1) and after some tweaking, [I was able](https://github.com/satrapu/aspnet-core-logging/blob/master/Build/SonarBuildBreaker.ps1) to query the SonarCloud server for the status of the quality gate and break the build if the gate did not pass:
 
@@ -729,7 +725,7 @@ Azure Pipelines is not the only way of achieving CI for your OSS project, [AppVe
 
 - [Azure DevOps](https://azure.microsoft.com/en-us/services/devops/)
   - [Documentation](https://docs.microsoft.com/en-us/azure/devops/?view=azure-devops)
-  - [Pricing for Azure DevOps](https://azure.microsoft.com/en-us/pricing/details/devops/azure-pipelines/), including a free one
+  - [Pricing for Azure DevOps](https://azure.microsoft.com/en-us/pricing/details/devops/azure-pipelines/), including a free plan
 - [Azure Pipelines](https://azure.microsoft.com/en-us/services/devops/pipelines/)
   - [Documentation](https://docs.microsoft.com/en-us/azure/devops/pipelines/index?view=azure-devops)
   - [YAML schema reference](https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema?view=azure-devops&tabs=schema)
