@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Use Docker when running integration tests with Azure Pipelines"
-date: 2019-06-01 17:32:43 +0200
+date: 2019-12-27 18:08:39 +0200
 tags: [programming, dotnet, dotnet-core, aspnet-core, azure-devops, azure-pipeline, integration-tests, docker, postgresql, linux-containers, windows-containers]
 ---
 
