@@ -8,6 +8,14 @@ layout: default
     <h1 class="post-title">{{ page.title }}</h1>
   </header>
 
+  <h5>
+    {% assign words = page.content | number_of_words %}
+
+    {% if words > 250 %}
+      Estimated reading time: {{ words | divided_by: 180 }} minutes
+    {% endif %}
+  </h5>
+
   <article class="post-content">
     {{ content }}
 
