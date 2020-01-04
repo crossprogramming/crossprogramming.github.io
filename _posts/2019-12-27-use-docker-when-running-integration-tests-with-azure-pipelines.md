@@ -95,7 +95,7 @@ The application expects to find a [connection string](https://www.connectionstri
   // Other sections
 
   "ConnectionStrings": {
-    "Todo": "Server=127.0.0.1;Port=5432;Database=myDataBase;User Id=myUsername;Password=myPassword;"
+    "Todo": "Server=127.0.0.1;Port=5432;Database=aspnet-core-logging-dev;Username=...;Password=...;"
   },
 
   // Other section
@@ -673,7 +673,7 @@ Below I have assembled several scenarios and my personal view over the recommend
 <h2 id="other-challenges">Other challenges</h2>
 <!-- markdownlint-disable MD033 -->
 
-While developing the Azure DevOps pipeline presented during this port, I have encountered several challenges and I believe documenting them might actually help others too.
+While developing the Azure DevOps pipeline presented during this post, I have encountered several challenges and I believe documenting them might actually help others too.
 
 <!-- markdownlint-disable MD033 -->
 <h3 id="run-postgresql-locally-using-docker">Run PostgreSQL database locally using Docker</h3>
