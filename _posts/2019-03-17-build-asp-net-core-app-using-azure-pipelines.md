@@ -426,16 +426,16 @@ Before describing how Coverlet can be integrated with Azure Pipelines, I have to
 Coverlet [GitHub project page](https://github.com/tonerdo/coverlet#usage) states that:
 > Coverlet can be used either as a .NET Core global tool that can be invoked from a terminal or as a NuGet package that integrates with the MSBuild system of your test project.
 
-Considering the above statement, I have chosen to [integrate Coverlet with MSBuild](https://github.com/tonerdo/coverlet#msbuild) by adding a reference to the [coverlet.msbuild](https://www.nuget.org/packages/coverlet.msbuild/) NuGet package and set specific MSBuild properties to the appropriate values when running [unit](#run-unit-tests) and [integration](#run-integration-tests) tests,.
+Considering the above statement, I have chosen to [integrate Coverlet with MSBuild](https://github.com/tonerdo/coverlet/blob/master/Documentation/MSBuildIntegration.md#coverlet-integration-with-msbuild) by adding a reference to the [coverlet.msbuild](https://www.nuget.org/packages/coverlet.msbuild/) NuGet package and set specific MSBuild properties to the appropriate values when running [unit](#run-unit-tests) and [integration](#run-integration-tests) tests,.
 
 ### Collect code coverage data
 
 In order to collect code coverage, one must use several MSBuild properties:
 
-- [CollectCoverage](https://github.com/tonerdo/coverlet#code-coverage-1) - used for enabling or disabling collecting coverage data
-- [CoverletOutputFormat](https://github.com/tonerdo/coverlet#coverage-output-1) - used for specifying the format of the coverage data (e.g. OpenCover, Cobertura, etc.)
+- [CollectCoverage](https://github.com/tonerdo/coverlet/blob/master/Documentation/MSBuildIntegration.md#code-coverage) - used for enabling or disabling collecting coverage data
+- [CoverletOutputFormat](https://github.com/tonerdo/coverlet/blob/master/Documentation/MSBuildIntegration.md#coverage-output) - used for specifying the format of the coverage data (e.g. OpenCover, Cobertura, etc.)
 - CoverletOutput - used for specifying the path where the coverage data file will be generated
-- [Include](https://github.com/tonerdo/coverlet#filters-1) - used for specifying for which assemblies and classes to collect coverage data
+- [Include](https://github.com/tonerdo/coverlet/blob/master/Documentation/MSBuildIntegration.md#filters) - used for specifying for which assemblies and classes to collect coverage data
 - Many others
 
 I have chosen OpenCover as the coverage data format since it's [supported by SonarQube](https://docs.sonarqube.org/pages/viewpage.action?pageId=6389770), a code quality tool also used by my pipeline:
