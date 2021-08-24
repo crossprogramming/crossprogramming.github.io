@@ -13,6 +13,9 @@ tags: [programming, dotnet, dotnet-core, aspnet-core, logging, structured-loggin
   - [Serilog enrichers](#serilog-enrichers)
   - [Serilog properties](#serilog-properties)
   - [Serilog destructuring](#serilog-destructuring)
+    - [Using destructuring operator](#destructuring-operator)
+    - [Using destructuring policies](#destructuring-policies)
+    - [Using destructuring libraries](#destructuring-libraries)
   - [Configure Serilog](#configure-serilog)
 - [What is Seq?](#what-is-seq)
   - [Run Seq using Docker](#run-seq-using-docker)
@@ -208,8 +211,11 @@ There are several __important things__ worth mentioning:
 
 <h3 id="serilog-destructuring">Serilog destructuring</h3>
 
-Serilog offers the [@ destructuring operator](https://github.com/serilog/serilog/wiki/Structured-Data#preserving-object-structure) which is used for pulling data from a structure, like a [DTO](https://en.wikipedia.org/wiki/Data_transfer_object ) or [POCO](https://en.wikipedia.org/wiki/Plain_old_CLR_object), and creating a series of properties with values.
+Destructuring means extracting pieces of information from an object like a [DTO](https://en.wikipedia.org/wiki/Data_transfer_object ) or [POCO](https://en.wikipedia.org/wiki/Plain_old_CLR_object) and create properties with values.
 
+<h4 id="destructuring-operator">Using destructuring operator</h4>
+
+Serilog offers the [@ destructuring operator](https://github.com/serilog/serilog/wiki/Structured-Data#preserving-object-structure).  
 For instance, my pet project uses this operator in order to log the search criteria used for fetching a list of records from a PostgreSQL database via an Entity Framework Core query.  
 Here's a fragment found inside [TodoService class](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.Services/TodoItemLifecycleManagement/TodoItemService.cs#L80-L104):
 
@@ -222,6 +228,8 @@ private async Task<IList<TodoItemInfo>> InternalGetByQueryAsync(TodoItemQuery to
 }
 ...
 ```
+
+<h4 id="destructuring-policies">Using destructuring policies</h4>
 
 In case there is a need to customize the way events are serialized, one can define several [destructuring policies](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/appsettings.json#L60-L86), like this:
 
@@ -240,6 +248,7 @@ In case there is a need to customize the way events are serialized, one can defi
       "policy": "Todo.Integrations.Serilog.Destructuring.NewTodoItemInfoDestructuringPolicy, Todo.Integrations.Serilog"
     }
   },
+  ...
 ],
 ...
 ```
@@ -271,6 +280,14 @@ public class DeleteTodoItemInfoDestructuringPolicy : IDestructuringPolicy
   }
 }
 ```
+
+<h4 id="destructuring-libraries">Using destructuring libraries</h4>
+
+In case destructuring operator and policies are not good enough, one can use libraries provided by community, like:
+
+- [Destructurama.Attributed](https://github.com/destructurama/attributed) which uses attributes to customize event serialization
+- [Destructurama.ByIgnoring](https://github.com/destructurama/by-ignoring) which enables excluding individual properties from events (e.g. log an event representing a user, but exclude any sensitive data, like its `Password` property)
+- [Destructurama.JsonNet](https://github.com/destructurama/json-net) which enables handling JSON.NET dynamic types as like any other event
 
 <h3 id="configure-serilog">Configure Serilog</h3>
 
