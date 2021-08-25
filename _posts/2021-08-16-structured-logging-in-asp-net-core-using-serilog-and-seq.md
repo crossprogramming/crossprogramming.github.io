@@ -17,6 +17,8 @@ tags: [programming, dotnet, dotnet-core, aspnet-core, logging, structured-loggin
     - [Using destructuring policies](#destructuring-policies)
     - [Using destructuring libraries](#destructuring-libraries)
   - [Configure Serilog](#configure-serilog)
+    - [Configure Serilog nouns](#configure-serilog-nouns)
+    - [Configure Serilog as an ASP.NET Core logging provider](#configure-serilog-as-logging-provider)
 - [What is Seq?](#what-is-seq)
   - [Run Seq using Docker](#run-seq-using-docker)
   - [Crash course for querying Seq data](#query-seq-data)
@@ -42,7 +44,7 @@ tags: [programming, dotnet, dotnet-core, aspnet-core, logging, structured-loggin
 <h2 id="context">Context</h2>
 
 Back in 2016 I was part of a team developing an e-care web application using SAP Hybris platform for an European telco. Among many other things, I was tasked with the initial deployment to the UAT environment which was supposed to be promoted to production as soon as the client would have validated that particular release. The web application was running in a Tomcat cluster made out of 8 or 9 Linux servers which I was able to access via SSH only, thus in order to investigate any issue occurring on that particular environment, I had to use CLI and run specific Linux commands in order to search for relevant lines of text found inside application log files - if I remember correctly, we were using [less](https://man7.org/linux/man-pages/man1/less.1.html) command.  
-One of my colleagues had a [MacBook Pro](https://www.apple.com/macbook-pro/) and with the help of [iterm2](https://iterm2.com/) he was able to split his window into one pane per server and run each command against all of them - unfortunately, at that time I was using a laptop running Windows, so I had to open one console per server and run each command inside each console which was a very time consuming and error prone activity.  
+One of my colleagues had a [MacBook Pro](https://www.apple.com/macbook-pro/) and with the help of [iterm2](https://iterm2.com/) he was able to split his window into one pane per server and run each command against all of them; unfortunately for me, at that time I was using a laptop running Windows, so I had to open one console per server and run each command inside each console which was a very time consuming and error prone activity.  
 There were two particular issues with this approach (beside lack of productivity due to dealing with multiple consoles): any real-time investigation was limited by Linux CLI support for searching text files and when any more offline advanced investigation was needed, we had to ask the client IT department to send us specific log files and use a text editor like [Notepad++](https://notepad-plus-plus.org/) to search across several files. These issues are direct consequences of employing [unstructured logging](#unstructured-logging) when dealing with application events.
 
 The purpose of this post is to present a way to create and query application events using the [structured logging](#structured-logging) mechanism provided by ASP.NET Core, with the help of [Serilog](https://serilog.net/) and [Seq](https://datalust.co/seq).
@@ -64,9 +66,9 @@ The [following answer](https://softwareengineering.stackexchange.com/a/312586) b
 
 <h2 id="what-is-serilog">What is Serilog?</h2>
 
-ASP.NET Core provides several [built-in logging providers](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#built-in-logging-providers) and when I have initially started using this framework, as I was already familiar with Log4Net, I started using it via the [Microsoft.Extensions.Logging.Log4Net.AspNetCore](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Log4Net.AspNetCore/) NuGet package - that was mid 2018. Almost one year later, I stumbled upon [Serilog](https://serilog.net/) and [Seq](https://datalust.co/seq) and I was blown away by this very powerful combination.  
+ASP.NET Core provides several [built-in logging providers](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#built-in-logging-providers) and when I have initially started using this framework, as I was already familiar with Log4Net, I employed the [Microsoft.Extensions.Logging.Log4Net.AspNetCore](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Log4Net.AspNetCore/) NuGet package - that was mid 2018. Several months later, I stumbled upon [Serilog](https://serilog.net/) and [Seq](https://datalust.co/seq) and I was blown away by this very powerful combination.  
 
-__Serilog__ is a logging framework *with powerful structured event data in mind* (as stated on its [home page](https://serilog.net/)) which was initially released as a [NuGet package](https://www.nuget.org/packages/Serilog/) in 2013. One uses Serilog to create events having a given structure and stores them in specific place, like a file or database. Serilog uses several concepts, like: [sinks](#serilog-sinks), [enrichers](#serilog-enrichers), [properties](#serilog-properties) and [destructuring](#serilog-destructuring), etc., at the same time offering the means to customize its behavior either via code-based or file-based [configuration sources](#configure-serilog).  
+__Serilog__ is a logging framework *with powerful structured event data in mind* (as stated on its [home page](https://serilog.net/)) which was initially released as a [NuGet package](https://www.nuget.org/packages/Serilog/) in 2013. One uses Serilog to create events having a given structure and stores them in specific place, like a file or database. Serilog uses several *nouns*, like: [sinks](#serilog-sinks), [enrichers](#serilog-enrichers), [properties](#serilog-properties) and [destructuring policies](#serilog-destructuring) and others, at the same time offering the means to configure its behavior either via code-based or file-based [configuration sources](#configure-serilog).  
 The community around this library is pretty solid, as seen on [NuGet gallery](https://www.nuget.org/packages?q=Tags%3A%22serilog%22%22), so one more reason to make Serilog my logging framework of choice!
 
 <h3 id="serilog-sinks">Serilog sinks</h3>
@@ -129,22 +131,31 @@ And here's a fragment found inside [appsettings.DemoInAzure.json file](https://g
 
 There are several __important things__ worth mentioning:
 
-- We usually need to install one NuGet package per sink, so just declaring them under the `Using` JSON property is not enough
-- Each sink has its own list of configuration properties which must be declared under the `Args` JSON property, but usually the GitHub repo of each Serilog sink states how to configure it, so it shouldn't be that hard to properly set it up
+- We usually need to install one NuGet package per sink, so just declaring them under the `Using` section is not enough
+- Each sink has its own list of configuration properties which must be declared under the `Args` section, but usually the GitHub repo of each Serilog sink states how to configure it, so it shouldn't be that hard to properly set it up
+  - The `Console` sink uses several placeholders found under its `Args` section:
+    - `Timestamp` represents the date and time when the event was created
+    - `Level` represents the logging level associated with the event
+    - `SourceContext` represents the name of the `logger` used for creating the event; usually it is the name of the class where event was created
+    - `NewLine` represents a new line to split event data to several lines
+    - `Message` represents the event data
+    - `Exception` represents a logged exception (which includes its stack trace)
+    - Though not used, there is another very important placeholder, `Properties`, which contains, obviously, all properties associated with the event
+  - The `Seq` sink uses `serverUrl` to point to the running Seq instance which will ingest events; my pet project runs Seq via [Docker Compose](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/docker-compose.yml#L73-L87), thus explaining why the host is the local one
 - Several sinks might need extra setup outside the application configuration files - e.g. the __instrumentation key__ used by Azure Application Insights is set inside [Startup class](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/Startup.cs#L142-L151):
 
-```cs
-private void ConfigureApplicationInsights(IServiceCollection services)
-{
-    if (IsSerilogApplicationInsightsSinkConfigured)
-    {
-        var applicationInsightsOptions = new ApplicationInsightsOptions();
-        Configuration.Bind(applicationInsightsOptions);
+  ```cs
+  private void ConfigureApplicationInsights(IServiceCollection services)
+  {
+      if (IsSerilogApplicationInsightsSinkConfigured)
+      {
+          var applicationInsightsOptions = new ApplicationInsightsOptions();
+          Configuration.Bind(applicationInsightsOptions);
 
-        services.AddApplicationInsightsTelemetry(applicationInsightsOptions.InstrumentationKey);
-    }
-}
-```
+          services.AddApplicationInsightsTelemetry(applicationInsightsOptions.InstrumentationKey);
+      }
+  }
+  ```
 
 <h3 id="serilog-enrichers">Serilog enrichers</h3>
 
@@ -168,14 +179,14 @@ Here's a fragment found inside [appsettings.json file](https://github.com/satrap
 
 There are several __important things__ worth mentioning:
 
-- We usually need to install one NuGet package per enricher, so just declaring them under the `Enrich` JSON property is not enough
-- Each enricher has its own list of string values which must be declared under the `Enrich` JSON property, but usually the GitHub repo of each Serilog enricher states what they are, so it shouldn't be that hard to properly set it up
+- We usually need to install one NuGet package per enricher, so just declaring them under the `Enrich` section is not enough
+- Each enricher has its own list of string values which must be declared under the `Enrich` section, but usually the GitHub repo of each Serilog enricher states what they are, so it shouldn't be that hard to properly set it up
 
 <h3 id="serilog-properties">Serilog properties</h3>
 
 Serilog properties are used to provide additional information to each or particular events, thus providing more value to the person querying such data. Each token found in a message template will be made available by Serilog as a property which can be used in a query running inside Seq or any other service capable of handling structured events.
 
-My pet project uses properties to enrich events with information about the name of the application which changes based on the current hosting environment (e.g. local, Azure or anything else) and to provide default values to properties which will be populated at run-time only (e.g. the name of the application flow initiated by a user, the ID of the thread used for running the current code or the ID of the conversation used for grouping related events).    
+My pet project uses properties to enrich events with information about the name of the application which changes based on the current hosting environment (e.g. local, Azure or anything else) and to provide default values to properties which will be populated at run-time only (e.g. the name of the application flow initiated by a user, the ID of the thread used for running the current code or the ID of the conversation used for grouping related events).  
 Here's a fragment found inside [appsettings.json file](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/appsettings.json#L54-L59) configuring Serilog properties when application runs in any environment:
 
 ```json
@@ -205,7 +216,7 @@ Here's the properties found inside [appsettings.Development.json](https://github
 
 There are several __important things__ worth mentioning:
 
-- The `N/A` values will be replaced at run-time by actual meaningful values, e.g. `ApplicationFlowName` property will be populated with values like: `TodoItem/Add`, `TodoItems/FetchByQuery` or `Security/GenerateJwt`, based on what user action took place at a particular moment of time
+- The `N/A` values will be replaced at run-time by actual meaningful values (via [log scopes](#use-log-scopes), as described several sections below, to avoid coupling application code with Serilog API), e.g. `ApplicationFlowName` property will be populated with values like: `TodoItem/Add`, `TodoItems/FetchByQuery` or `Security/GenerateJwt`, based on what user action took place at a particular moment of time
 - All of the properties above act as __global__ ones, since they will accompany __any__ event
 - Due to the built-in [configuration override mechanism](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-5.0#appsettingsjson) provided by ASP.NET Core, when application runs in any environment, each event will be accompanied by `Application`, `ApplicationFlowName`, `ConversationId` and `ThreadId` properties, but the value of the `Application` property will be set to __`Todo.WebApi`__ when application runs in __production__ environment and will be set to __`Todo.WebApi.Development`__ when application runs in __development__ environment.
 
@@ -291,16 +302,23 @@ In case destructuring operator and policies are not good enough, one can use lib
 
 <h3 id="configure-serilog">Configure Serilog</h3>
 
-Up until now I have shown the configuration file based way of setting up Serilog, but this library supports code based configuration too. From what I've seen until now, almost each GitHub repo hosting anything related to Serilog (e.g. sink, enricher, etc.), usually documents both approaches. I personally favor setting up Serilog via configuration files since I do not want to redeploy the application each time I need to adjust Serilog setup (i.e. when I need to increase or decrease the current logging level in order to capture less or more events).
+In order for an ASP.NET Core application to use Serilog, several things need to be setup:
 
-Read more about the different ways of configuring Serilog [here](https://github.com/serilog/serilog/wiki/Configuration-Basics) and [here](https://github.com/tsimbalar/serilog-settings-comparison/blob/master/docs/README.md).  
-In case you have to run your application on top of .NET Framework, check [this page](https://github.com/serilog/serilog/wiki/AppSettings) to understand how to configure Serilog via the `appSettings` XML section found inside the application configuration file.
+- Declare the sinks, enrichers and any other Serilog related nouns used for logging purposes
+- Configure application to use Serilog as a logging provider
 
-The Serilog JSON configuration found inside the appsettings.json can be seen [here](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/appsettings.json#L22-L86); each hosting environment overrides various parts of Serilog configuration, usually the logging level, sinks and global properties, as one can see inside [appsettings.Development.json](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/appsettings.Development.json#L10-L37), [appsettings.IntegrationTests.json](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/appsettings.IntegrationTests.json#L9-L36) and [appsettings.DemoInAzure.json](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/appsettings.DemoInAzure.json#L7-L33) files.
+<h4 id="configure-serilog-nouns">Configure Serilog nouns</h4>
+
+Up until now I have shown the configuration file based way of setting up Serilog, but this library supports code based configuration too. From what I've seen until now, almost each GitHub repo hosting anything related to Serilog (e.g. sink, enricher, etc.), usually documents both approaches. I personally favor setting up Serilog via configuration files since I do not want to redeploy the application each time I need to adjust Serilog setup (i.e. when I need to increase or decrease the current logging level to capture less or more events).
+
+Read more about the different ways of configuring Serilog [here](https://github.com/serilog/serilog/wiki/Configuration-Basics), [here](https://github.com/tsimbalar/serilog-settings-comparison/blob/master/docs/README.md) and [here](https://github.com/serilog/serilog-settings-configuration).  
+In case you have to run your application on top of .NET Framework, check [this wiki page](https://github.com/serilog/serilog/wiki/AppSettings) to understand how to configure Serilog via the `appSettings` XML section found inside the application configuration file.
+
+The Serilog JSON configuration of my pet project found inside the appsettings.json can be seen [here](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/appsettings.json#L22-L86); each hosting environment overrides various parts of Serilog configuration, usually the logging level, sinks and global properties, as one can see inside [appsettings.Development.json](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/appsettings.Development.json#L10-L37), [appsettings.IntegrationTests.json](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/appsettings.IntegrationTests.json#L9-L36) and [appsettings.DemoInAzure.json](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/appsettings.DemoInAzure.json#L7-L33) files.
 
 There are several __important things__ worth mentioning:
 
-- The `LevelSwitches` section defines a switch used for controlling the current [logging level](https://github.com/serilog/serilog/blob/dev/src/Serilog/Events/LogEventLevel.cs#L20-L56) used by Serilog - see more details [here](https://github.com/serilog/serilog/wiki/Writing-Log-Events#dynamic-levels)
+- The `LevelSwitches` section defines a switch used for controlling the current [logging level](https://github.com/serilog/serilog/wiki/Writing-Log-Events#log-event-levels) used by Serilog - see more details [here](https://github.com/serilog/serilog/wiki/Writing-Log-Events#dynamic-levels)
   - __IMPORTANT:__ This switch can be used for reconfiguring Serilog without the need to restart the application - see more details [here](https://github.com/serilog/serilog-settings-configuration/issues/72)
 - The `MinimumLevel` section defines what gets logged and what not - e.g. `{ "Override": { "Microsoft": "Warning"} }` means that from all events generated by classes found under the __Microsoft__ namespace and any of its descendants, Serilog will log only warnings and errors, discarding the rest; `{ "Override": { "Microsoft.EntityFrameworkCore.Database.Command": "Information"} }` means Serilog will log all SQL commands executed by Entity Framework Core
 - The `Using` section declares all Serilog sinks to be used by the application
@@ -308,6 +326,78 @@ There are several __important things__ worth mentioning:
 - The `Enrich` section declares all Serilog enrichers to be used by the application
 - The `Properties` section declares all Serilog properties which will accompany all application events
 - The `Destructure` section declares all Serilog classes used for serializing particular application events
+
+<h4 id="configure-serilog-as-logging-provider">Configure Serilog as an ASP.NET Core logging provider</h4>
+
+Until now I have shown how to configure Serilog nouns, now's the moment to show how to integrate Serilog with an ASP.NET Core application.  
+The usual approach is to setup this integration in two places:
+
+- [Program class](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/Program.cs), in order to capture any errors occurring during host setup phase
+  
+  I first need to instantiate Serilog `Logger` class:
+
+  ```cs
+  private static readonly Logger logger =
+    new LoggerConfiguration()
+      .Enrich.FromLogContext()
+      .WriteTo.Console()
+      .CreateLogger();
+  ```
+
+  Then Serilog will be able to log any error:
+
+  ```cs
+  public static void Main(string[] args)
+  {
+      try
+      {
+          CreateHostBuilder(args).Build().Run();
+      }
+      catch (Exception exception)
+      {
+          logger.Fatal(exception, "Todo ASP.NET Core Web API failed to start");
+          throw;
+      }
+      finally
+      {
+          logger.Dispose();
+      }
+  }
+  ```
+
+- [Startup class](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/Startup.cs#L168-L196), in order to let infrastructure know that it can use Serilog as a logging provider:
+  
+  ```cs
+  services.AddLogging(loggingBuilder =>
+  {
+      if (IsSerilogFileSinkConfigured)
+      {
+          string logsHomeDirectoryPath = Environment.GetEnvironmentVariable(LogsHomeEnvironmentVariable);
+
+          if (string.IsNullOrWhiteSpace(logsHomeDirectoryPath) || !Directory.Exists(logsHomeDirectoryPath))
+          {
+              var currentWorkingDirectory = new DirectoryInfo(Directory.GetCurrentDirectory());
+              DirectoryInfo logsHomeDirectory = currentWorkingDirectory.CreateSubdirectory("Logs");
+              Environment.SetEnvironmentVariable(LogsHomeEnvironmentVariable, logsHomeDirectory.FullName);
+          }
+      }
+
+      if (!WebHostingEnvironment.IsDevelopment())
+      {
+          loggingBuilder.ClearProviders();
+      }
+
+      loggingBuilder.AddSerilog(new LoggerConfiguration()
+          .ReadFrom.Configuration(Configuration)
+          .CreateLogger(), dispose: true);
+  });
+  ```
+
+  There are several __important things__ worth mentioning:
+
+  - In case the current environment has been configured to use `Serilog.Sinks.File` sink, then I will ensure the environment variable `%LOGS_HOME%` [declared](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/appsettings.json#L41) under the appropriate `Args` section will be correctly populated at run-time
+  - Any built-in logging providers are removed when application runs outside local development environment to minimize the impact logging has over the application performance
+  - I'm configuring Serilog via the [current configuration](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/Program.cs#L51-L60)
 
 <h2 id="what-is-seq">What is Seq?</h2>
 Being able to create events with a given structure is not enough when you need to extract relevant data out of them - one needs the means to parse, index and query such data.  
@@ -389,7 +479,7 @@ TODO
     - [Serilog Best Practices by Ben Foster](https://benfoster.io/blog/serilog-best-practices/)
   - Extensions
     - [Serilog Expressions](https://github.com/serilog/serilog-expressions)
-      - [Define filter in configuration file](https://stackoverflow.com/a/44035241/5786708) 
+      - [Define filter in configuration file](https://stackoverflow.com/a/44035241/5786708)
     - [Serilog.Extensions.Hosting](https://github.com/serilog/serilog-extensions-hosting)
     - Many, many others - just google them
 - Seq
@@ -402,4 +492,7 @@ TODO
 <h2 id="conclusion">Conclusion</h2>
 
 Structured logging is not just for debugging purposes, as it can be used for various other purposes, like: spotting performance bottlenecks, auditing, analytics, distributed tracing and a lot more.  
-Using structured logging is definitely one of the best ways a developer can employ in order to help both business and technical stakeholders make better and more informed decisions to positively impact the outcome of a particular software system.
+Using structured logging is definitely one of the best ways a developer can employ in order to help both business and technical stakeholders make better and more informed decisions to positively impact the outcome of a particular software system.  
+The only downside of structured logging I see right now is that you have to learn a new query language for each server you are going to use for ingesting events, so you need to learn one when using Seq and another one when using Azure Application Insights, but I think the price is well worth it due to the amazing amount of information you can extract.
+
+So what are you waiting for? Go put some structure into your events and query them like a boss!
