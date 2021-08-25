@@ -329,8 +329,8 @@ There are several __important things__ worth mentioning:
 
 <h4 id="configure-serilog-as-logging-provider">Configure Serilog as an ASP.NET Core logging provider</h4>
 
-Until now I have shown how to configure Serilog nouns, now's the moment to show how to integrate Serilog with an ASP.NET Core application.  
-The usual approach is to setup this integration in two places:
+Until now I have shown how to configure Serilog nouns, now's the time to show how to add Serilog as a logging provider to an ASP.NET Core application.  
+The usual approach is to setup things up in two places:
 
 - [Program class](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/Program.cs), in order to capture any errors occurring during host setup phase
   
@@ -398,6 +398,7 @@ The usual approach is to setup this integration in two places:
   - In case the current environment has been configured to use `Serilog.Sinks.File` sink, then I will ensure the environment variable `%LOGS_HOME%` [declared](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/appsettings.json#L41) under the appropriate `Args` section will be correctly populated at run-time
   - Any built-in logging providers are removed when application runs outside local development environment to minimize the impact logging has over the application performance
   - I'm configuring Serilog via the [current configuration](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/Program.cs#L51-L60)
+  - There is a downside to my current approach, as the Serilog setup found in Program.cs file differs from the one found in Startup.cs file; on the other hand, Nicholas Blumhardt has come up with [a solution](https://nblumhardt.com/2020/10/bootstrap-logger/) and I'm itching for experimenting with it as I'm not happy in having to maintain two Serilog configurations 
 
 <h2 id="what-is-seq">What is Seq?</h2>
 Being able to create events with a given structure is not enough when you need to extract relevant data out of them - one needs the means to parse, index and query such data.  
