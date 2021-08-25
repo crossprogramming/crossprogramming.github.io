@@ -398,7 +398,13 @@ The usual approach is to setup things up in two places:
   - In case the current environment has been configured to use `Serilog.Sinks.File` sink, then I will ensure the environment variable `%LOGS_HOME%` [declared](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/appsettings.json#L41) under the appropriate `Args` section will be correctly populated at run-time
   - Any built-in logging providers are removed when application runs outside local development environment to minimize the impact logging has over the application performance
   - I'm configuring Serilog via the [current configuration](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/Program.cs#L51-L60)
-  - There is a downside to my current approach, as the Serilog setup found in Program.cs file differs from the one found in Startup.cs file; on the other hand, Nicholas Blumhardt has come up with [a solution](https://nblumhardt.com/2020/10/bootstrap-logger/) and I'm itching for experimenting with it as I'm not happy in having to maintain two Serilog configurations 
+  - There is a downside to my current approach, as the Serilog setup found in Program.cs file differs from the one found in Startup.cs file; on the other hand, Nicholas Blumhardt has come up with [a solution](https://nblumhardt.com/2020/10/bootstrap-logger/) and I'm itching for experimenting with it as I'm not happy having to maintain two Serilog configurations
+  - I had to add several Serilog related [NuGet packages](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Directory.Build.targets#L31-L35):
+    - [Serilog](https://www.nuget.org/packages/Serilog/) used for creating [destructuring policies](#destructuring-policies)
+    - [Serilog.AspNetCore](https://www.nuget.org/packages/Serilog.AspNetCore) used for adding Serilog as logging provider to the ASP.NET Core application
+    - [Serilog.Enrichers.Thread](https://www.nuget.org/packages/Serilog.Enrichers.Thread) used for enriching events with the current thread ID
+    - [Serilog.Sinks.ApplicationInsights](https://www.nuget.org/packages/Serilog.Sinks.ApplicationInsights) used when sending events to an Azure Application Insights instance
+    - [Serilog.Sinks.Seq](https://www.nuget.org/packages/Serilog.Sinks.Seq) used for sending events to a Seq instance
 
 <h2 id="what-is-seq">What is Seq?</h2>
 Being able to create events with a given structure is not enough when you need to extract relevant data out of them - one needs the means to parse, index and query such data.  
