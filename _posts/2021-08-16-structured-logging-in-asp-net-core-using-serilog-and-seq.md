@@ -412,7 +412,36 @@ __Seq__ is *machine data, for humans* (as stated on its [home page](https://data
 
 <h3 id="run-seq-using-docker">Run Seq using Docker</h3>
 
-TODO
+The quickest way of experimenting locally with Seq is to run it inside a Docker container. Since my pet project uses PostgreSQL too, it felt naturally to run all application dependencies using [Docker Compose](https://docs.docker.com/compose/). The [instructions](https://hub.docker.com/r/datalust/seq) found on Docker Hub are pretty easy to follow and adapting them to Docker Compose is not hard:
+
+```yaml
+version: '3.8'
+services:
+  seq:
+      container_name: seq
+      image: datalust/seq:2021.2
+      restart: unless-stopped
+      volumes:
+        - seq_data:/data
+      ports:
+        # Ingestion port
+        - "5341:5341/tcp"
+        # UI port
+        - "8888:80/tcp"
+      networks:
+        - local_seq
+      environment:
+        - ACCEPT_EULA=Y
+volumes:
+  seq_data:
+    external: true
+
+networks:
+  local_seq:
+```
+
+Once Seq Docker container has started, one can access its UI by opening a browser and navigating to URL: <http://localhost:8888/#/events>, as seen below:
+![seq-events-page]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/1-seq-events-page.png)
 
 <h3 id="query-seq-data">Crash course for querying Seq data</h3>
 
@@ -500,6 +529,6 @@ TODO
 
 Structured logging is not just for debugging purposes, as it can be used for various other purposes, like: spotting performance bottlenecks, auditing, analytics, distributed tracing and a lot more.  
 Using structured logging is definitely one of the best ways a developer can employ in order to help both business and technical stakeholders make better and more informed decisions to positively impact the outcome of a particular software system.  
-The only downside of structured logging I see right now is that you have to learn a new query language for each server you are going to use for ingesting events, so you need to learn one when using Seq and another one when using Azure Application Insights, but I think the price is well worth it due to the amazing amount of information you can extract.
+The only downside to structured logging I see right now is that you have to learn a new language for each server you are going to use for querying events, so you need to learn one when using Seq and another one when using Azure Application Insights, but I think the price is well worth it due to the amazing amount of information you can extract.
 
 So what are you waiting for? Go put some structure into your events and query them like a boss!
