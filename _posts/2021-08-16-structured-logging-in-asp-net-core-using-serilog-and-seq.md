@@ -459,7 +459,7 @@ There are several __important things__ worth mentioning:
 
 <h3 id="query-seq-data">Crash course for querying Seq data</h3>
 
-Seq uses a SQL-like query language for querying ingested events which is very well [documented](https://docs.datalust.co/docs/the-seq-query-language); due to its sheer complexity, it cannot be the topic of just *one* post, so I will only show several examples.
+Seq uses a SQL-like query language for querying ingested events which is very well [documented](https://docs.datalust.co/docs/the-seq-query-language); due to its sheer complexity, it cannot be the topic of just *one* post, so I will only show several examples and let the reader consult the official documentation.
 
 - Given a user, what application flows did he executed during the past 24 hours?
 
@@ -489,6 +489,8 @@ Seq uses a SQL-like query language for querying ingested events which is very we
   ```
 
   ![ingested-message-templates]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/4-ingested-message-templates.png)
+
+  This question is mostly related to security, as the query results will let the security auditor understand whether any sensitive data is accidentally logged by the application.
   
 <h2 id="log-application-events">Log application events</h2>
 
