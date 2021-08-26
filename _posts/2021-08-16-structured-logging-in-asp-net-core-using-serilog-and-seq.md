@@ -8,6 +8,7 @@ tags: [programming, dotnet, dotnet-core, aspnet-core, logging, structured-loggin
 - [Context](#context)
 - [What is unstructured logging?](#unstructured-logging)
 - [What is structured logging?](#structured-logging)
+- [Why should I use structured logging?](#why-structured-logging)
 - [What is Serilog?](#what-is-serilog)
   - [Serilog sinks](#serilog-sinks)
   - [Serilog enrichers](#serilog-enrichers)
@@ -62,7 +63,12 @@ This is __unstructured logging__, since an event is just a line of text which do
 __Structured logging__ means creating events having a particular __structure__; such data can then be ingested by another service which offers the means to parse, index and finally query it.  
 ASP.NET Core was built having structure logging in mind with the help of [logging providers](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#logging-providers), [message templates](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-message-template) and [log scopes](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-scopes).
 
-The [following answer](https://softwareengineering.stackexchange.com/a/312586) best describes the differences between these two logging approaches. Furthermore, this answer was provided by __Nicholas Blumhardt__, who created Serilog - I highly recommend following his [blog](https://nblumhardt.com/) to discover lots and lots of very interesting stuff related to logging in .NET!
+Several years ago I stumbled upon one of Nicholas Blumhardt's [answers](https://softwareengineering.stackexchange.com/a/312586) on the internet which really got me thinking about structured logging. It took me years to finally have the opportunity of using it in a commercial project, but after using it, I strongly believe is a game changer!
+
+<h2 id="why-structured-logging">Why should I use structured logging?</h2>
+
+The short answer is: *be able to (quickly) answer (almost) any business or technical question about your application behavior, its data and its users*.  
+Read the rest of this post for the longer answer.
 
 <h2 id="what-is-serilog">What is Serilog?</h2>
 
@@ -76,8 +82,7 @@ The community around this library is pretty solid, as seen on [NuGet gallery](ht
 A Serilog sink is a component which receives events generated via Serilog and stores them or sends them over to other components which will further process these events. There are plenty of such sinks, ready to support almost any given scenario - see the official list [here](https://github.com/serilog/serilog/wiki/Provided-Sinks). If this list does not cover *your* scenario, you can always write your own sink by starting from an already implemented one or from [scratch](https://github.com/serilog/serilog/wiki/Developing-a-sink)! Of course, there are many more sinks, as one can see by [querying GitHub](https://github.com/search?l=C%23&q=serilog+sink&type=Repositories).
 
 In 2019 I joined a team developing a deal advisory management application running in Azure where we had 3 web APIs, each one writing events during local development to its own file. Each developer had to search through several files in order to investigate a particular issue or to find a relevant piece of information, a thing which was neither comfortable, nor quick.  
-After discovering Seq, I'm now strongly recommending using it for __local development__ via [Serilog.Sinks.Seq](https://github.com/serilog/serilog-sinks-seq) - this enables sending events from the application to a running Seq instance (most likely [a Docker container](#run-seq-using-docker) running on local machine) which will ingest them and then provide the means to perform rather complex queries against *all* events, thus avoiding the overhead and performance penalty caused by logging to files.  
-I've also configured the [Serilog.Sinks.Console](https://github.com/serilog/serilog-sinks-console) to quickly allow me spot any errors while performing dev testing locally.  
+After discovering Seq, I'm now strongly recommending using it for __local development__ via [Serilog.Sinks.Seq](https://github.com/serilog/serilog-sinks-seq) sink - this enables sending events from the application to a running Seq instance (most likely [a Docker container](#run-seq-using-docker) running on local machine) which will ingest them and then provide the means to perform rather complex queries against *all* events, thus avoiding the overhead and performance penalty caused by logging to files.  
 
 In case the application production environment (or any remote environment, for that matter) is hosted by a cloud provider, I strongly recommend using the Serilog sink which integrates with the logging/monitoring service of that particular provider - e.g. one could pair [Serilog.Sinks.ApplicationInsights](https://github.com/serilog/serilog-sinks-applicationinsights) with Azure, [Serilog Sink for AWS CloudWatch](https://github.com/Cimpress-MCP/serilog-sinks-awscloudwatch) with AWS and [Serilog.Sinks.GoogleCloudLogging](https://github.com/manigandham/serilog-sinks-googlecloudlogging) with GCP, etc.  
 Outside cloud, one could use Seq for all environments, which comes with the benefit of having to learn only one query language instead of two.
@@ -142,6 +147,7 @@ There are several __important things__ worth mentioning:
     - `Exception` represents a logged exception (which includes its stack trace)
     - Though not used, there is another very important placeholder, `Properties`, which contains, obviously, all properties associated with the event
   - The `Seq` sink uses `serverUrl` to point to the running Seq instance which will ingest events; my pet project runs Seq via [Docker Compose](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/docker-compose.yml#L73-L87), thus explaining why the host is the local one
+- The `Console` sink is used to quickly spot any errors which might occur while performing local dev testing
 - Several sinks might need extra setup outside the application configuration files - e.g. the __instrumentation key__ used by Azure Application Insights is set inside [Startup class](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/Startup.cs#L142-L151):
 
   ```cs
@@ -304,7 +310,7 @@ In case destructuring operator and policies are not good enough, one can use lib
 
 In order for an ASP.NET Core application to use Serilog, several things need to be setup:
 
-- Declare the sinks, enrichers and any other Serilog related nouns used for logging purposes
+- Configure the sinks, enrichers and any other Serilog related nouns
 - Configure application to use Serilog as a logging provider
 
 <h4 id="configure-serilog-nouns">Configure Serilog nouns</h4>
@@ -408,7 +414,9 @@ The usual approach is to setup things up in two places:
 
 <h2 id="what-is-seq">What is Seq?</h2>
 Being able to create events with a given structure is not enough when you need to extract relevant data out of them - one needs the means to parse, index and query such data.  
-__Seq__ is *machine data, for humans* (as stated on its [home page](https://datalust.co/seq)).
+__Seq__ is *machine data, for humans* (as stated on its [home page](https://datalust.co/seq)) and it's well equipped to perform these things.
+
+One of the nice things about Seq is that you can freely use it for both development and production, as long as you're the only user.  If you need more users to access your Seq server, you have to start paying - check pricing [here](https://datalust.co/pricing).
 
 <h3 id="run-seq-using-docker">Run Seq using Docker</h3>
 
@@ -440,13 +448,48 @@ networks:
   local_seq:
 ```
 
-Once Seq Docker container has started, one can access its UI by opening a browser and navigating to URL: <http://localhost:8888/#/events>, as seen below:
-![seq-events-page]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/1-seq-events-page.png)
+There are several __important things__ worth mentioning:
+
+- The ingestion port exposed by Docker to localhost as __5341__ matches the port used by `Seq` sink (remember `"serverUrl": "http://localhost:5341"`?)
+- Once Seq Docker container has started, one can access its UI by opening a browser and navigating to URL: <http://localhost:8888/#/events>, as seen below:
+  ![seq-events-page]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/1-seq-events-page.png)
+
+- As soon as Seq has started ingesting events, one can expand them in order to see all relevant details:
+  ![expanded-event]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/2-expanded-event.png)
 
 <h3 id="query-seq-data">Crash course for querying Seq data</h3>
 
-TODO
+Seq uses a SQL-like query language for querying ingested events which is very well [documented](https://docs.datalust.co/docs/the-seq-query-language); due to its sheer complexity, it cannot be the topic of just *one* post, so I will only show several examples.
 
+- Given a user, what application flows did he executed during the past 24 hours?
+
+  ```sql
+  select distinct(ApplicationFlowName) as FlowName
+  from stream
+  where 
+    @Timestamp >= Now() - 24h
+    and FlowInitiator = 'c2F0cmFwdQ=='
+    and @MessageTemplate like '% has finished executing application flow %'
+  ```
+
+  ![flows-executed-by-user-during-past-24h]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/3-flows-executed-by-user-during-past-24h.png)
+
+  The `ApplicationFlowName` (the name of the application flow which implements a business feature) and `FlowInitiator` (the obfuscated name of the current user who initiated the flow) are custom Serilog properties populated at run-time via log scopes, while `@MessageTemplate` and `@Timestamp` are [built-in properties](https://docs.datalust.co/docs/built-in-properties-and-functions) provided by Seq.  
+  The `from stream` clause says that events will be extracted from the ingested ones.
+
+- What kind of messages are logged by this application?
+  
+  ```sql
+  select distinct(@MessageTemplate) as MessageTemplate
+  from stream
+  where 
+    @MessageTemplate not like '--- REQUEST %'
+    and @MessageTemplate not like '--- RESPONSE %'  
+  order by MessageTemplate
+  ```
+
+  ![ingested-message-templates]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/4-ingested-message-templates.png)
+  
 <h2 id="log-application-events">Log application events</h2>
 
 TODO
@@ -524,6 +567,11 @@ TODO
     - [Official Documentation](https://docs.datalust.co/docs)
     - [Getting Started with Docker](https://docs.datalust.co/docs/getting-started-with-docker)
     - [Structured Logging with Serilog and Seq](https://docs.datalust.co/docs/using-serilog#structured-logging-with-serilog-and-seq)
+    - [Seq Cheat Sheets](https://github.com/datalust/seq-cheat-sheets)
+  - Tools
+    - [seqcli](https://github.com/datalust/seqcli)
+    - [Seq Forwarder](https://github.com/datalust/seq-forwarder)
+    - [Seq Health Check](https://github.com/datalust/seq-input-healthcheck)
 
 <h2 id="conclusion">Conclusion</h2>
 
