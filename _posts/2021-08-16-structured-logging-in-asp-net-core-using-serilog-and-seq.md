@@ -459,7 +459,8 @@ There are several __important things__ worth mentioning:
 
 <h3 id="query-seq-data">Crash course for querying Seq data</h3>
 
-Seq uses a SQL-like query language for querying ingested events which is very well [documented](https://docs.datalust.co/docs/the-seq-query-language); due to its sheer complexity, it cannot be the topic of just *one* post, so I will only show several examples and let the reader consult the official documentation.
+Seq uses a SQL-like query language for querying ingested events which is very well [documented](https://docs.datalust.co/docs/the-seq-query-language); due to its sheer complexity, it cannot be the topic of just *one* post, so I will only show several examples and let the reader consult the official documentation.  
+Another reason for not writing more about Seq is that you may decide to use a different server for querying structured events, like Azure Application Insights, so any Seq related info will not help you at all.
 
 - Given a user, what application flows did he executed during the past 24 hours?
 
@@ -490,7 +491,7 @@ Seq uses a SQL-like query language for querying ingested events which is very we
 
   ![ingested-message-templates]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/4-ingested-message-templates.png)
 
-  This question is mostly related to security, as the query results will let the security auditor understand whether any sensitive data is accidentally logged by the application.
+  The `@MessageTemplate` property represents an event created by application and sent to Seq via a Serilog sink; looking at each such template, one can understand what is being logged and whether this pose any security risk or not. For instance, a security auditor might check each template to understand whether any sensitive data (e.g. passwords, authentication tokens, etc.) is being logged. If this is the case, the developer will need to patch the code and redeploy the new application version, thus fixing the security issue. Having to manually read the entire code base to figure out whether application logs sensitive data is a very tedious and error prone process, so using a Seq query instead is the better approach.
   
 <h2 id="log-application-events">Log application events</h2>
 
@@ -550,6 +551,10 @@ TODO
 
 <h2 id="references">References</h2>
 
+- Logging in ASP.NET Core
+  - Reading
+    - [Logging in .NET Core and ASP.NET Core](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0)
+    - [High-performance logging with LoggerMessage in ASP.NET Core](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/loggermessage?view=aspnetcore-5.0)
 - Serilog
   - Reading
     - [Official Site](https://serilog.net/)
@@ -563,6 +568,10 @@ TODO
       - [Define filter in configuration file](https://stackoverflow.com/a/44035241/5786708)
     - [Serilog.Extensions.Hosting](https://github.com/serilog/serilog-extensions-hosting)
     - Many, many others - just google them
+  - Alternatives
+    - [Log4Net](https://logging.apache.org/log4net/)
+    - [NLog](https://nlog-project.org/)
+    - Others
 - Seq
   - Reading
     - [Official Site](https://datalust.co/seq)
@@ -574,6 +583,9 @@ TODO
     - [seqcli](https://github.com/datalust/seqcli)
     - [Seq Forwarder](https://github.com/datalust/seq-forwarder)
     - [Seq Health Check](https://github.com/datalust/seq-input-healthcheck)
+  - Alternatives
+    - [ELK Stack](https://www.elastic.co/what-is/elk-stack)
+    - Others
 
 <h2 id="conclusion">Conclusion</h2>
 
