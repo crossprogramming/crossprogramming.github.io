@@ -45,12 +45,12 @@ tags: [programming, dotnet, dotnet-core, aspnet-core, logging, structured-loggin
 <h2 id="context">Context</h2>
 
 Back in 2016 I was part of a team developing an e-care web application using SAP Hybris platform for an European telco. Among many other things, I was tasked with the initial deployment to the UAT environment which was supposed to be promoted to production as soon as the client would have validated that particular release. The web application was running in a Tomcat cluster made out of 8 or 9 Linux servers which I was able to access via SSH only, thus in order to investigate any issue occurring on that particular environment, I had to use CLI and run specific Linux commands in order to search for relevant lines of text found inside application log files - if I remember correctly, we were using [less](https://man7.org/linux/man-pages/man1/less.1.html) command.  
-One of my colleagues had a [MacBook Pro](https://www.apple.com/macbook-pro/) and with the help of [iterm2](https://iterm2.com/) he was able to split his window into one pane per server and run each command against all of them; unfortunately for me, at that time I was using a laptop running Windows, so I had to open one console per server and run each command inside each console which was a very time consuming and error prone activity.  
+One of my colleagues had a MacBook Pro and with the help of [iterm2](https://iterm2.com/) he was able to split his window into one pane per server and run each command against all of them at the same time; unfortunately for me, I was using a laptop running Windows, so I had to open one console per server and run each command inside each console which was a very time consuming and error prone activity.  
 There were two particular issues with this approach (beside lack of productivity due to dealing with multiple consoles): any real-time investigation was limited by Linux CLI support for searching text files and when any more offline advanced investigation was needed, we had to ask the client IT department to send us specific log files and use a text editor like [Notepad++](https://notepad-plus-plus.org/) to search across several files. These issues are direct consequences of employing [unstructured logging](#unstructured-logging) when dealing with application events.
 
 The purpose of this post is to present a way to create and query application events using the [structured logging](#structured-logging) mechanism provided by ASP.NET Core, with the help of [Serilog](https://serilog.net/) and [Seq](https://datalust.co/seq).
 
-All code fragments found in this post are part of my pet project [aspnet-core-logging](https://github.com/satrapu/aspnet-core-logging); furthermore, I have created a [tag](https://github.com/satrapu/aspnet-core-logging/tree/v20210824) to ensure these fragments will remain the same, no matter how this project will evolve.
+All code fragments found in this post are part of my pet project [aspnet-core-logging](https://github.com/satrapu/aspnet-core-logging); furthermore, I have created a [tag](https://github.com/satrapu/aspnet-core-logging/tree/v20210824) to ensure these fragments will remain the same, no matter how this project will evolve in the future.
 
 <h2 id="unstructured-logging">What is unstructured logging?</h2>
 
@@ -495,15 +495,113 @@ Another reason for not writing more about Seq is that you may decide to use a di
   
 <h2 id="log-application-events">Log application events</h2>
 
-TODO
+An ASP.NET Core application logs events using [Microsoft.Extensions.Logging.ILogger](https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.ilogger?view=dotnet-plat-ext-5.0) interface provided via [Microsoft.Extensions.Logging.Abstractions](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions) NuGet package.  
+Any class which needs to log events will require infrastructure to inject an `ILogger` object and will use any of the `LogXYZ` overloads to create and send the event to the underlying logging provider, i.e. Serilog.
+
+```cs
+public class TodoItemService : ITodoItemService
+{
+  ...
+  private readonly ILogger logger;
+
+  public TodoItemService(TodoDbContext todoDbContext, ILogger<TodoItemService> logger)
+  {
+      ...
+      this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+  }
+
+  private async Task<IList<TodoItemInfo>> InternalGetByQueryAsync(TodoItemQuery todoItemQuery)
+  {
+      logger.LogInformation("About to fetch items using query {@TodoItemQuery} ...", todoItemQuery);
+      ...
+  }
+  ...
+}
+```
 
 <h2 id="use-message-templates">Use message templates</h2>
 
-TODO
+The [Microsoft.Extensions.Logging.ILogger](https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.ilogger?view=dotnet-plat-ext-5.0) interface comes with several `LogXYZ` overloads where `message` parameter is always a string. When I initially started using this interface, before starting using structured logging, I used string interpolation believing that the `message` is the actual info to be logged, so my logging code would look like this:
+
+```cs
+var user = service.GetUser(...);
+var action = service.GetAction(...);
+logger.LogInformation($"User with name {user.UserName} has initiated action {action.Name}");
+```
+
+The Log4Net based logging provider I was using at that time would happily write the above string inside the currently configured console or file, but that was an *unstructured* way of logging.  
+The *structured* way means treating `message` as a __message template__ and not as a plain string. The logging provider knows how to create the event based on this template, but will also have the chance of promoting the actual values used for replacing the placeholders to properties which have specific semantics, thus being able to handle a *structured* event.  
+
+Considering all of the above, the __correct__ way of logging structured events in ASP.NET Core is:
+
+```cs
+var user = service.GetUser(...);
+var action = service.GetAction(...);
+logger.LogInformation("User with name {UserName} has initiated action {ActionName}", user.UserName, action.Name);
+```
+
+There are several __important things__ worth mentioning:
+
+- The above code fragment contains:
+  - A __message template__: `User with name {UserName} has initiated action {ActionName}`
+  - Two __placeholders__: `{UserName}` and `{ActionName}`
+  - Two __values__ which will replace the placeholders when the logging provider will handle the event at run-time: `user.UserName` and `action.Name`
+    - The order of the values *is* important, since each placeholder will be replaced with the corresponding value
+- We no longer need to use string interpolation
+
+Because I'm employing message templates and since I'm using Seq, I could run the following query in order to identify the users which have logged-in during the last 24 hours:
+
+```sql
+select 
+  distinct(UserName)
+from stream 
+where 
+  @Timestamp >= now() - 24h
+  and ActionName = 'Login'
+```
+
+Additionally, I could run a query to identify which users did not login during the past 6 months, and thus I should deactivate their accounts; I could run many other such queries - the only real impediments in getting the most out of the ingested structured events are my imagination and my ability in mastering Seq query language!
 
 <h2 id="use-log-scopes">Use log scopes</h2>
 
-TODO
+What happens if I want to ensure that a particular set of events share the same property? For instance, there is good reason in identifying all events generated while processing the current HTTP request - what we want is to basically *group* such events by their HTTP request identifier.  
+ASP.NET Core provides the so-called __log scopes__ which are used exactly for such grouping purpose.
+
+In order to group events by their parent HTTP request identifier, one can employ an ASP.NET Core [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-5.0) which will generate an identifier (basically a GUID) which will accompany any event created while processing that particular HTTP request.
+
+The below fragment belongs to [ConversationIdProviderMiddleware class](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/Logging/ConversationIdProviderMiddleware.cs):
+
+```cs
+public async Task Invoke(HttpContext httpContext)
+{
+    if (!httpContext.Request.Headers.TryGetValue(ConversationId, out StringValues conversationId)
+        || string.IsNullOrWhiteSpace(conversationId))
+    {
+        conversationId = Guid.NewGuid().ToString("N");
+        httpContext.Request.Headers.Add(ConversationId, conversationId);
+    }
+
+    httpContext.Response.Headers.Add(ConversationId, conversationId);
+
+    using (logger.BeginScope(new Dictionary<string, object>
+    {
+        [ConversationId] = conversationId.ToString()
+    }))
+    {
+        await nextRequestDelegate(httpContext);
+    }
+}
+```
+
+In the lines above I'm checking whether a `ConversationId` has already been provided as an HTTP header; if not, I'm creating a new one and adding it to both HTTP request and response.  
+I'm then creating a log scope to store a dictionary containing the `ConversationId` - this will ensure that this key-value pair will accompany *all* events created during this HTTP operation.  
+Identifying events belonging to one particular *conversation* is a matter of running the Seq query:
+
+```sql
+select * from stream where ConversationId = '340436533dfd467e9659b3f7978981cb'
+```
+
+![query-events-by-conversation-id]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/5-query-events-by-conversation-id.png)
 
 <h2 id="use-cases">Use cases</h2>
 
