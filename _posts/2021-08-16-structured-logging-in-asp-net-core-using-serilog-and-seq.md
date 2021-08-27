@@ -496,7 +496,7 @@ Another reason for not writing more about Seq is that you may decide to use a di
 <h2 id="log-application-events">Log application events</h2>
 
 An ASP.NET Core application logs events using [Microsoft.Extensions.Logging.ILogger](https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.ilogger?view=dotnet-plat-ext-5.0) interface provided via [Microsoft.Extensions.Logging.Abstractions](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions) NuGet package.  
-Any class which needs to log events will require infrastructure to inject an `ILogger` object and will use any of the `LogXYZ` overloads to create and send the event to the underlying logging provider, i.e. Serilog.
+Any class which needs to log events will require infrastructure to inject an `ILogger` object and will use any of its `LogXYZ` overloads to create and send the event to the underlying logging provider, i.e. Serilog.
 
 ```cs
 public class TodoItemService : ITodoItemService
@@ -595,12 +595,13 @@ public async Task Invoke(HttpContext httpContext)
 
 In the lines above I'm checking whether a `ConversationId` has already been provided as an HTTP header; if not, I'm creating a new one and adding it to both HTTP request and response.  
 I'm then creating a log scope to store a dictionary containing the `ConversationId` - this will ensure that this key-value pair will accompany *all* events created during this HTTP operation.  
-Identifying events belonging to one particular *conversation* is a matter of running the Seq query:
+Identifying events belonging to one particular *conversation* is a matter of running the following Seq query:
 
 ```sql
 select * from stream where ConversationId = '340436533dfd467e9659b3f7978981cb'
 ```
 
+This query will find several events:
 ![query-events-by-conversation-id]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/5-query-events-by-conversation-id.png)
 
 <h2 id="use-cases">Use cases</h2>
