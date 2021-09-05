@@ -13,6 +13,7 @@ tags: [programming, dotnet, dotnet-core, aspnet-core, logging, structured-loggin
   - [Serilog sinks](#serilog-sinks)
   - [Serilog enrichers](#serilog-enrichers)
   - [Serilog properties](#serilog-properties)
+  - [Serilog stringification](#serilog-stringification)
   - [Serilog destructuring](#serilog-destructuring)
     - [Using destructuring operator](#destructuring-operator)
     - [Using destructuring policies](#destructuring-policies)
@@ -24,8 +25,9 @@ tags: [programming, dotnet, dotnet-core, aspnet-core, logging, structured-loggin
   - [Run Seq using Docker](#run-seq-using-docker)
   - [Crash course for querying Seq data](#query-seq-data)
 - [Log application events](#log-application-events)
-  - [Use message templates](#use-message-templates)
-  - [Use log scopes](#use-log-scopes)
+  - [Logging providers](#logging-providers)
+  - [Message templates](#message-templates)
+  - [Log scopes](#log-scopes)
 - [Use cases](#use-cases)
   - [Debugging](#debugging-use-case)
     - [Identify error root cause](#identify-error-root-cause)
@@ -55,7 +57,7 @@ All code fragments found in this post are part of my pet project [aspnet-core-lo
 <h2 id="unstructured-logging">What is unstructured logging?</h2>
 
 Creating an application event is usually done by instantiating a string, maybe using [string interpolation](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/tokens/interpolated) and then sending it to a console, file or database using a logging library like [Log4Net](https://logging.apache.org/log4net/); an educated developer might even check whether the logging library will log the event before creating it to avoid waisting time and resources - see more details about such approach inside the __Performance__ section of the article found [here](https://logging.apache.org/log4net/release/manual/internals.html#performance).  
-This approach is called __logging__, since we keep a __log__ of events. As the events have been created using plain text, when we need to search for specific data inside the log, we usually resort to the basic search feature offered by the text editor at hand or maybe regular expressions. Neither approach is suitable for complex searches - a text editor can only search for words contained inside the events stored in one or more files, while writing a custom regex to fetch specific data is not an easy task, plus searching through *all* events means you need to access *all* log files, a feat which might involve terrabytes of data or even more; also, how do you write a regex to fetch the answer to a question like: *What events created during this specific time period contain (or do not contain) this particular pieces of information*?  
+This approach is called __logging__, since we keep a __log__ of events. As the events have been created using plain text, when we need to search for specific data inside the log, we usually resort to the basic search feature offered by the text editor at hand or maybe regular expressions. Neither approach is suitable for complex searches - a text editor can only search for words contained inside the events stored in one or more files, while writing a custom regex to fetch specific data is not an easy task, plus searching through *all* events means you need to access *all* log files, a feat which might involve terrabytes of data or even more; also, how would you write a regex to answer a question like: *What events created during this specific time range contain (or do not contain) this particular pieces of information*?  
 This is __unstructured logging__, since an event is just a line of text which does not have any structure.  
 
 <h2 id="structured-logging">What is structured logging?</h2>
@@ -63,7 +65,7 @@ This is __unstructured logging__, since an event is just a line of text which do
 __Structured logging__ means creating events having a particular __structure__; such data can then be ingested by another service which offers the means to parse, index and finally query it.  
 ASP.NET Core was built having structure logging in mind with the help of [logging providers](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#logging-providers), [message templates](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-message-template) and [log scopes](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-scopes).
 
-Several years ago I stumbled upon one of Nicholas Blumhardt's [answers](https://softwareengineering.stackexchange.com/a/312586) on the internet which really got me thinking about structured logging. It took me years to finally have the opportunity of using it in a commercial project, but after using it, I strongly believe is a game changer!
+Several years ago I stumbled upon one of Nicholas Blumhardt's [answers](https://softwareengineering.stackexchange.com/a/312586) on the internet which really got me thinking about structured logging. It took me years to finally have the opportunity of using it in a commercial project, but after using it, I strongly believe it's a game changer!
 
 <h2 id="why-structured-logging">Why should I use structured logging?</h2>
 
@@ -226,6 +228,23 @@ There are several __important things__ worth mentioning:
 - All of the properties above act as __global__ ones, since they will accompany __any__ event
 - Due to the built-in [configuration override mechanism](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-5.0#appsettingsjson) provided by ASP.NET Core, when application runs in any environment, each event will be accompanied by `Application`, `ApplicationFlowName`, `ConversationId` and `ThreadId` properties, but the value of the `Application` property will be set to __`Todo.WebApi`__ when application runs in __production__ environment and will be set to __`Todo.WebApi.Development`__ when application runs in __development__ environment.
 
+<h3 id="serilog-stringification">Serilog stringification</h3>
+
+Stringification means invoking the __ToString__ method of an object used as part of an event; Serilog offers the [$ stringification operator](https://github.com/serilog/serilog/wiki/Structured-Data#forcing-stringification) for this purpose, as seen below:
+
+```cs
+var unknown = new[] { 1, 2, 3 }
+Log.Information("Received {$Data}", unknown);
+```
+
+This will render:
+
+```text
+Received "System.Int32[]"
+```
+
+Though my pet project is not using this operator (yet), I believe it might be useful in some scenarios, thus it's worth mentioning it.
+
 <h3 id="serilog-destructuring">Serilog destructuring</h3>
 
 Destructuring means extracting pieces of information from an object like a [DTO](https://en.wikipedia.org/wiki/Data_transfer_object ) or [POCO](https://en.wikipedia.org/wiki/Plain_old_CLR_object) and create properties with values.
@@ -338,7 +357,7 @@ There are several __important things__ worth mentioning:
 Until now I have shown how to configure Serilog nouns, now's the time to show how to add Serilog as a logging provider to an ASP.NET Core application.  
 The usual approach is to setup things up in two places:
 
-- [Program class](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/Program.cs), in order to capture any errors occurring during host setup phase
+- [Program class](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/Program.cs#L20-L23), in order to capture any errors occurring during host setup phase
   
   I first need to instantiate Serilog `Logger` class:
 
@@ -401,9 +420,9 @@ The usual approach is to setup things up in two places:
 
   There are several __important things__ worth mentioning:
 
-  - In case the current environment has been configured to use `Serilog.Sinks.File` sink, then I will ensure the environment variable `%LOGS_HOME%` [declared](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/appsettings.json#L41) under the appropriate `Args` section will be correctly populated at run-time
+  - In case the current environment has been configured to use `Serilog.Sinks.File` sink, then I will ensure the environment variable `%LOGS_HOME%` [declared](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/appsettings.json#L41) under the appropriate `Args` section will be correctly populated at run-time, so that the log files can be correctly located in that given location (i.e. the __Logs__ directory found under the current working directory)
   - Any built-in logging providers are removed when application runs outside local development environment to minimize the impact logging has over the application performance
-  - I'm configuring Serilog via the [current configuration](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/Program.cs#L51-L60)
+  - I'm configuring Serilog via the [current application configuration](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/Program.cs#L51-L60)
   - There is a downside to my current approach, as the Serilog setup found in Program.cs file differs from the one found in Startup.cs file; on the other hand, Nicholas Blumhardt has come up with [a solution](https://nblumhardt.com/2020/10/bootstrap-logger/) and I'm itching for experimenting with it as I'm not happy having to maintain two Serilog configurations
   - I had to add several Serilog related [NuGet packages](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Directory.Build.targets#L31-L35):
     - [Serilog](https://www.nuget.org/packages/Serilog/) used for creating [destructuring policies](#destructuring-policies)
@@ -414,17 +433,18 @@ The usual approach is to setup things up in two places:
 
 <h2 id="what-is-seq">What is Seq?</h2>
 Being able to create events with a given structure is not enough when you need to extract relevant data out of them - one needs the means to parse, index and query such data.  
-__Seq__ is *machine data, for humans* (as stated on its [home page](https://datalust.co/seq)) and it's well equipped to perform these things.
+__Seq__ is *machine data, for humans* (as stated on its [home page](https://datalust.co/seq)) and it's *very* well equipped to perform these things.
 
 One of the nice things about Seq is that you can freely use it for both development and production, as long as you're the only user.  If you need more users to access your Seq server, you have to start paying - check pricing [here](https://datalust.co/pricing).
 
 <h3 id="run-seq-using-docker">Run Seq using Docker</h3>
 
-The quickest way of experimenting locally with Seq is to run it inside a Docker container. Since my pet project uses PostgreSQL too, it felt naturally to run all application dependencies using [Docker Compose](https://docs.docker.com/compose/). The [instructions](https://hub.docker.com/r/datalust/seq) found on Docker Hub are pretty easy to follow and adapting them to Docker Compose is not hard:
+The quickest way of running Seq locally is via Docker. Since my pet project uses PostgreSQL too, it felt naturally to run all application dependencies using [Docker Compose](https://docs.docker.com/compose/). The [instructions](https://hub.docker.com/r/datalust/seq) found on Docker Hub are pretty easy to follow and adapting them to Docker Compose is not hard:
 
 ```yaml
 version: '3.8'
 services:
+  ...
   seq:
       container_name: seq
       image: datalust/seq:2021.2
@@ -441,16 +461,18 @@ services:
       environment:
         - ACCEPT_EULA=Y
 volumes:
+  ...
   seq_data:
     external: true
 
 networks:
+  ...
   local_seq:
 ```
 
 There are several __important things__ worth mentioning:
 
-- The ingestion port exposed by Docker to localhost as __5341__ matches the port used by `Seq` sink (remember `"serverUrl": "http://localhost:5341"`?)
+- The ingestion port exposed by Docker to localhost as __5341__ matches the port used by `Seq` sink ([remember](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/appsettings.Development.json#L29) `"serverUrl": "http://localhost:5341"`?)
 - Once Seq Docker container has started, one can access its UI by opening a browser and navigating to URL: <http://localhost:8888/#/events>, as seen below:
   ![seq-events-page]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/1-seq-events-page.png)
 
@@ -459,7 +481,7 @@ There are several __important things__ worth mentioning:
 
 <h3 id="query-seq-data">Crash course for querying Seq data</h3>
 
-Seq uses a SQL-like query language for querying ingested events which is very well [documented](https://docs.datalust.co/docs/the-seq-query-language); due to its sheer complexity, it cannot be the topic of just *one* post, so I will only show several examples and let the reader consult the official documentation.  
+Seq uses a SQL-like query language for querying ingested events which is *very* well [documented](https://docs.datalust.co/docs/the-seq-query-language); due to its sheer complexity, it cannot be the topic of just *one* post, so I will only show several examples and let the reader consult the official documentation.  
 Another reason for not writing more about Seq is that you may decide to use a different server for querying structured events, like Azure Application Insights, so any Seq related info will not help you at all.
 
 - Given a user, what application flows did he executed during the past 24 hours?
@@ -491,7 +513,7 @@ Another reason for not writing more about Seq is that you may decide to use a di
 
   ![ingested-message-templates]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/4-ingested-message-templates.png)
 
-  The `@MessageTemplate` property represents an event created by application and sent to Seq via a Serilog sink; looking at each such template, one can understand what is being logged and whether this pose any security risk or not. For instance, a security auditor might check each template to understand whether any sensitive data (e.g. passwords, authentication tokens, etc.) is being logged. If this is the case, the developer will need to patch the code and redeploy the new application version, thus fixing the security issue. Having to manually read the entire code base to figure out whether application logs sensitive data is a very tedious and error prone process, so using a Seq query instead is the better approach.
+  The `@MessageTemplate` property represents the __template__ used by the application to create an event and sent to Seq via a Serilog sink; looking at each such template, one can understand what is being logged and whether this pose any security risk or not. For instance, a security auditor might check each template to understand whether any sensitive data (e.g. passwords, authentication tokens, etc.) is being logged. If this is the case, the developer will need to patch the code and redeploy the new application version, thus fixing the security issue. Having to manually read the entire code base to figure out whether application logs sensitive data is a very tedious and error prone process, so using a Seq query instead is the better approach.
   
 <h2 id="log-application-events">Log application events</h2>
 
@@ -519,7 +541,13 @@ public class TodoItemService : ITodoItemService
 }
 ```
 
-<h2 id="use-message-templates">Use message templates</h2>
+<h3 id="logging-providers">Logging providers</h3>
+
+I've already mentioned Serilog as an ASP.NET Core [logging provider](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#logging-providers). Microsoft offers several built-in logging providers, but there are plenty [3rd parties](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#third-party-logging-providers) as well.  
+In case you have invested in a specific logging framework, like Log4Net or NLog, the good news is you'll most likely be able to use it, as community most likely has provided an integration with ASP.NET Core.  
+If such integration is missing, it's a good opportunity for a developer to make a name for himself ;)!
+
+<h3 id="message-templates">Message templates</h3>
 
 The [Microsoft.Extensions.Logging.ILogger](https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.ilogger?view=dotnet-plat-ext-5.0) interface comes with several `LogXYZ` overloads where `message` parameter is always a string. When I initially started using this interface, before starting using structured logging, I used string interpolation believing that the `message` is the actual info to be logged, so my logging code would look like this:
 
@@ -530,7 +558,7 @@ logger.LogInformation($"User with name {user.UserName} has initiated action {act
 ```
 
 The Log4Net based logging provider I was using at that time would happily write the above string inside the currently configured console or file, but that was an *unstructured* way of logging.  
-The *structured* way means treating `message` as a __message template__ and not as a plain string. The logging provider knows how to create the event based on this template, but will also have the chance of promoting the actual values used for replacing the placeholders to properties which have specific semantics, thus being able to handle a *structured* event.  
+The *structured* way means treating `message` as a [__message template__](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-message-template) and not as a plain string. The logging provider knows how to create the event based on this template, but will also have the chance of promoting the actual values used for replacing the placeholders to properties which have specific semantics, thus being able to handle a *structured* event.  
 
 Considering all of the above, the __correct__ way of logging structured events in ASP.NET Core is:
 
@@ -562,12 +590,12 @@ where
 
 Additionally, I could run a query to identify which users did not login during the past 6 months, and thus I should deactivate their accounts; I could run many other such queries - the only real impediments in getting the most out of the ingested structured events are my imagination and my ability in mastering Seq query language!
 
-<h2 id="use-log-scopes">Use log scopes</h2>
+<h3 id="log-scopes">Log scopes</h3>
 
-What happens if I want to ensure that a particular set of events share the same property? For instance, there is good reason in identifying all events generated while processing the current HTTP request - what we want is to basically *group* such events by their HTTP request identifier.  
-ASP.NET Core provides the so-called __log scopes__ which are used exactly for such grouping purpose.
+What happens if I want to ensure that a particular set of events share the same property? For instance, there is good reason in identifying all events generated while processing a particular HTTP request - what we want is to basically *group* such events by their HTTP request identifier.  
+ASP.NET Core provides the so-called [__log scopes__](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-scopes) which are used exactly for such grouping purposes.
 
-In order to group events by their parent HTTP request identifier, one can employ an ASP.NET Core [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-5.0) which will generate an identifier (basically a GUID) which will accompany any event created while processing that particular HTTP request.
+In order to group events by their HTTP request identifier, one can employ an ASP.NET Core [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-5.0) which will generate an identifier (basically a GUID) which will accompany any event created while processing that particular HTTP request.
 
 The below fragment belongs to [ConversationIdProviderMiddleware class](https://github.com/satrapu/aspnet-core-logging/blob/v20210824/Sources/Todo.WebApi/Logging/ConversationIdProviderMiddleware.cs):
 
@@ -594,11 +622,13 @@ public async Task Invoke(HttpContext httpContext)
 ```
 
 In the lines above I'm checking whether a `ConversationId` has already been provided as an HTTP header; if not, I'm creating a new one and adding it to both HTTP request and response.  
-I'm then creating a log scope to store a dictionary containing the `ConversationId` - this will ensure that this key-value pair will accompany *all* events created during this HTTP operation.  
+I'm then creating a log scope to store a dictionary containing the `ConversationId` key - this will ensure that this key-value pair will accompany *all* events created during this HTTP operation; I personally believe using key-value pairs make the code more readable than using other ways of setting the scope, but feel free to disagree.  
 Identifying events belonging to one particular *conversation* is a matter of running the following Seq query:
 
 ```sql
-select * from stream where ConversationId = '340436533dfd467e9659b3f7978981cb'
+select * 
+from stream 
+where ConversationId = '340436533dfd467e9659b3f7978981cb'
 ```
 
 This query will find several events:
@@ -606,7 +636,7 @@ This query will find several events:
 
 <h2 id="use-cases">Use cases</h2>
 
-Aggregating application events (and not just application, as one could also collect events generated by the infrastructure used for running this application!) into one place and being able to query them using a structured language is very powerful and can cut costs expressed in reduced investigation time, reduced employee frustration, etc.
+Aggregating application events (and not just this kind of events, as one could also collect events generated by the infrastructure used for running this application!) into one place and being able to query them using a structured language is very powerful and can cut costs expressed in reduced issue investigation time, reduced employee & end-user frustration, increased chance of making the best possible business decisions, and more, so much more!
 
 <h3 id="debugging-use-case">Debugging</h3>
 
