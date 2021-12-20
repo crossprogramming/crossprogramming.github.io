@@ -2,7 +2,7 @@
 layout: post
 title: "Structured logging in ASP.NET Core using Serilog and Seq"
 date: 2021-08-16 22:40:07 +0200
-tags: [programming, dotnet, dotnet-core, aspnet-core, logging, structured-logging, serilog, seq]
+tags: [programming, dotnet, dotnet-core, aspnet-core, logging, structured-logging, serilog, seq, docker, docker-compose]
 ---
 
 - [Context](#context)
@@ -63,7 +63,7 @@ This is __unstructured logging__, since an event is just a line of text which do
 <h2 id="structured-logging">What is structured logging?</h2>
 
 __Structured logging__ means creating events having a particular __structure__; such data can then be ingested by another service which offers the means to parse, index and finally query it.  
-ASP.NET Core was built having structure logging in mind with the help of [logging providers](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#logging-providers), [message templates](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-message-template) and [log scopes](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-scopes).
+ASP.NET Core was built having structure logging in mind with the help of [logging providers](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#logging-providers), [message templates](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-message-template) and [log scopes](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-scopes-1).
 
 Several years ago I stumbled upon one of Nicholas Blumhardt's [answers](https://softwareengineering.stackexchange.com/a/312586) on the internet which really got me thinking about structured logging. It took me years to finally have the opportunity of using it in a commercial project, but after using it, I strongly believe it's a game changer!
 
@@ -593,7 +593,7 @@ Additionally, I could run a query to identify which users did not login during t
 <h3 id="log-scopes">Log scopes</h3>
 
 What happens if I want to ensure that a particular set of events share the same property? For instance, there is good reason in identifying all events generated while processing a particular HTTP request - what we want is to basically *group* such events by their HTTP request identifier.  
-ASP.NET Core provides the so-called [__log scopes__](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-scopes) which are used exactly for such grouping purposes.
+ASP.NET Core provides the so-called [__log scopes__](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-scopes-1) which are used exactly for such grouping purposes.
 
 In order to group events by their HTTP request identifier, one can employ an ASP.NET Core [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-5.0) which will generate an identifier (basically a GUID) which will accompany any event created while processing that particular HTTP request.
 
@@ -640,15 +640,117 @@ Aggregating application events (and not just this kind of events, as one could a
 
 <h3 id="debugging-use-case">Debugging</h3>
 
-TODO
+One of the most common purposes we use logging for is __debugging__; since we usually must not attach a debugger to a production environment to investigate an issue as this might cause even worse ones, we rely upon reading the existing logged events to figure why a particular piece of application behaves the way it does.
 
 <h4 id="identify-error-root-cause">Identify error root cause</h4>
 
-TODO
+In case the application throws an exception, we usually log it and display a notification to the end-user saying that an error has occurred while processing his request. We can do better than that: let's generate an error ID, include it inside the message used for logging the exception and make sure the notification to the end-user mentions it so that any bug report which will eventually need to be taken care by the developers will include it. It's way easier to run a query to fetch the exception with its details once you know its associated error ID than it is to manually search through all events logged during the period of time mentioned inside the bug report (usually given by the time when the report was created, though this might happen minutes after the bug was spotted).  
+We need to configure exception handling inside the [Startup.Configure method](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/Startup.cs#L120-L124):
+
+```cs
+public void Configure(IApplicationBuilder applicationBuilder, IHostApplicationLifetime hostApplicationLifetime, ILogger<Startup> logger)
+{
+    ...
+    applicationBuilder.UseExceptionHandler(new ExceptionHandlerOptions
+    {
+        ExceptionHandler = CustomExceptionHandler.HandleException,
+        AllowStatusCode404Response = true
+    });
+    ...
+}
+```
+
+The [CustomExceptionHandler.ConvertToProblemDetails method](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/ExceptionHandling/CustomExceptionHandler.cs#L74-L90) converts the given __Exception__ into a __ProblemDetails__ instance allowing for a consistent error response:
+
+```cs
+private static ProblemDetails ConvertToProblemDetails(Exception exception, bool includeDetails)
+{
+    var problemDetails = new ProblemDetails
+    {
+        Status = (int) GetHttpStatusCode(exception),
+        Title = "An unexpected error occurred while trying to process the current request",
+        Detail = includeDetails ? exception?.ToString() : string.Empty,
+        Extensions =
+        {
+            {ErrorData, exception?.Data},
+            {ErrorId, Guid.NewGuid().ToString("N")},
+            {ErrorKey, GetErrorKey(exception)}
+        }
+    };
+
+    return problemDetails;
+}
+```
+
+The above `ProblemDetails.Extensions` dictionary contains an `ErrorId` key which points to a plain `Guid` - this is our error ID which will allows us to run a query like this, given its value is `1d6640cd16974e84b5ef7deacc590a6b`:
+
+```sql
+select * 
+from stream
+where ErrorId = '1d6640cd16974e84b5ef7deacc590a6b'
+```
+
+Or you can run the equivalent:
+
+```sql
+select * 
+from stream
+where ProblemDetails.Extensions.errorId = '1d6640cd16974e84b5ef7deacc590a6b'
+```
+
+This query will find exactly one event:
+![query-exception-details-by-error-id]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/6-query-exception-details-by-error-id.png)
 
 <h4 id="fetch-conversation-events">Fetch events from same conversation</h4>
 
-TODO
+Let's assume we have received a bug report mentioning the above error ID, `1d6640cd16974e84b5ef7deacc590a6b`. We can query Seq to get the exception details, but what happened during that HTTP request until that moment? To answer this question, we need to have the means of grouping events generated during the same __conversation__, which represents a period of time usually greater or equal to the duration of an HTTP request, but less than the current user session. ASP.NET Core has built-in support for grouping requests, as documented [here](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#automatically-log-scope-with-spanid-traceid-and-parentid); on the other hand, as I'm a rather curious person, I've used a [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-5.0) to inject the conversation ID via log scope into each event generated during the same conversation, as seen inside the [ConversationIdMiddleware.Invoke method](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/Logging/ConversationIdProviderMiddleware.cs#L29-L47):
+
+```cs
+...
+public async Task Invoke(HttpContext httpContext)
+{
+    if (!httpContext.Request.Headers.TryGetValue(ConversationId, out StringValues conversationId)
+        || string.IsNullOrWhiteSpace(conversationId))
+    {
+        conversationId = Guid.NewGuid().ToString("N");
+        httpContext.Request.Headers.Add(ConversationId, conversationId);
+    }
+
+    httpContext.Response.Headers.Add(ConversationId, conversationId);
+
+    using (logger.BeginScope(new Dictionary<string, object>
+    {
+        [ConversationId] = conversationId.ToString()
+    }))
+    {
+        await nextRequestDelegate(httpContext);
+    }
+}
+...
+```
+
+Identifying the appropriate `conversation ID` knowing the `error ID` can be done via:
+
+```sql
+select ConversationId
+from stream
+where ProblemDetails.Extensions.errorId = '1d6640cd16974e84b5ef7deacc590a6b'
+```
+
+This query will find the conversation ID:
+![identify-conversation-id-by-error-id]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/7-identify-conversation-id-by-error-id.png)
+
+Then, fetching events from this conversation can be done via:
+
+```sql
+select ToIsoString(@Timestamp) as Date, @Arrived, @Message
+from stream
+where ConversationId = 'f3d8ea64b29749d69b898f77ab472c7f'
+order by Date asc
+```
+
+The above query will find several events:
+![fetch-events-from-given-conversation]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/8-fetch-events-from-given-conversation.png)
 
 <h3 id="analytics-use-case">Analytics</h3>
 
