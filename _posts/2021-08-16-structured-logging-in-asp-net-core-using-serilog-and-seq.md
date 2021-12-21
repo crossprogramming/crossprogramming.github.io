@@ -644,8 +644,9 @@ One of the most common purposes we use logging for is __debugging__; since we us
 
 <h4 id="identify-error-root-cause">Identify error root cause</h4>
 
-In case the application throws an exception, we usually log it and display a notification to the end-user saying that an error has occurred while processing his request. We can do better than that: let's generate an error ID, include it inside the message used for logging the exception and make sure the notification to the end-user mentions it so that any bug report which will eventually need to be taken care by the developers will include it. It's way easier to run a query to fetch the exception with its details once you know its associated error ID than it is to manually search through all events logged during the period of time mentioned inside the bug report (usually given by the time when the report was created, though this might happen minutes after the bug was spotted).  
-We need to configure exception handling inside the [Startup.Configure method](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/Startup.cs#L120-L124):
+In case the application throws an exception, we usually log it and display a notification to the end-user saying that an error has occurred while processing his request. We can do better than that: let's generate an error ID, include it inside the message used for logging the exception and make sure the notification to the end-user mentions it so that any bug report which will eventually need to be taken care by the developers will include it. It's way easier to run a query to fetch the exception with its details once you know its associated error ID than it is to manually search through all events logged during the period of time mentioned inside the bug report (usually given by the time when the report was created, though the report might be created at a later time after the bug was spotted).  
+
+We need to configure [exception handling](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/error-handling?view=aspnetcore-5.0) inside the [Startup.Configure method](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/Startup.cs#L120-L124):
 
 ```cs
 public void Configure(IApplicationBuilder applicationBuilder, IHostApplicationLifetime hostApplicationLifetime, ILogger<Startup> logger)
@@ -660,7 +661,7 @@ public void Configure(IApplicationBuilder applicationBuilder, IHostApplicationLi
 }
 ```
 
-The [CustomExceptionHandler.ConvertToProblemDetails method](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/ExceptionHandling/CustomExceptionHandler.cs#L74-L90) converts the given __Exception__ into a __ProblemDetails__ instance allowing for a consistent error response:
+The [CustomExceptionHandler.ConvertToProblemDetails method](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/ExceptionHandling/CustomExceptionHandler.cs#L74-L90) converts the caught exception into a [ProblemDetails](https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.mvc.problemdetails?view=aspnetcore-5.0) instance allowing for a consistent error response:
 
 ```cs
 private static ProblemDetails ConvertToProblemDetails(Exception exception, bool includeDetails)
@@ -682,7 +683,7 @@ private static ProblemDetails ConvertToProblemDetails(Exception exception, bool 
 }
 ```
 
-The above `ProblemDetails.Extensions` dictionary contains an `ErrorId` key which points to a plain `Guid` - this is our error ID which will allows us to run a query like this, given its value is `1d6640cd16974e84b5ef7deacc590a6b`:
+The above `ProblemDetails.Extensions` dictionary contains an `ErrorId` key which points to a plain `Guid` - this is our error ID which will allows us to run a query like below (given its value is `1d6640cd16974e84b5ef7deacc590a6b`):
 
 ```sql
 select * 
@@ -703,10 +704,9 @@ This query will find exactly one event:
 
 <h4 id="fetch-conversation-events">Fetch events from same conversation</h4>
 
-Let's assume we have received a bug report mentioning the above error ID, `1d6640cd16974e84b5ef7deacc590a6b`. We can query Seq to get the exception details, but what happened during that HTTP request until that moment? To answer this question, we need to have the means of grouping events generated during the same __conversation__, which represents a period of time usually greater or equal to the duration of an HTTP request, but less than the current user session. ASP.NET Core has built-in support for grouping requests, as documented [here](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#automatically-log-scope-with-spanid-traceid-and-parentid); on the other hand, as I'm a rather curious person, I've used a [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-5.0) to inject the conversation ID via log scope into each event generated during the same conversation, as seen inside the [ConversationIdMiddleware.Invoke method](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/Logging/ConversationIdProviderMiddleware.cs#L29-L47):
+Let's assume we have received a bug report mentioning the above error ID, `1d6640cd16974e84b5ef7deacc590a6b`. We can query Seq to get the exception details, but what happened during that HTTP request until that moment? To answer this question, we need to have the means of grouping events generated during the same __conversation__, which represents a period of time usually greater or equal to the duration of an HTTP request, but less than the current user session. ASP.NET Core has built-in support for grouping requests, as documented [here](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#automatically-log-scope-with-spanid-traceid-and-parentid); on the other hand, as I'm a rather curious person, I've implemented my own [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-5.0) to inject the conversation ID via log scope into each event generated during the same conversation, as seen inside the [ConversationIdMiddleware.Invoke method](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/Logging/ConversationIdProviderMiddleware.cs#L29-L47):
 
 ```cs
-...
 public async Task Invoke(HttpContext httpContext)
 {
     if (!httpContext.Request.Headers.TryGetValue(ConversationId, out StringValues conversationId)
@@ -726,8 +726,9 @@ public async Task Invoke(HttpContext httpContext)
         await nextRequestDelegate(httpContext);
     }
 }
-...
 ```
+
+The above code ensures that each request and response pair will use the same HTTP header with the same value, furthermore, any event logged while processing the request will be accompanied by a conversation ID.  
 
 Identifying the appropriate `conversation ID` knowing the `error ID` can be done via:
 
@@ -740,7 +741,7 @@ where ProblemDetails.Extensions.errorId = '1d6640cd16974e84b5ef7deacc590a6b'
 This query will find the conversation ID:
 ![identify-conversation-id-by-error-id]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/7-identify-conversation-id-by-error-id.png)
 
-Then, fetching events from this conversation can be done via:
+Fetching all events belonging to the conversation where the exception has occurred can be done via:
 
 ```sql
 select ToIsoString(@Timestamp) as Date, @Arrived, @Message
@@ -749,7 +750,7 @@ where ConversationId = 'f3d8ea64b29749d69b898f77ab472c7f'
 order by Date asc
 ```
 
-The above query will find several events:
+The above query projects the Seq built-in property `@Timestamp` into a new value and will use it to sort entries ascending:
 ![fetch-events-from-given-conversation]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/8-fetch-events-from-given-conversation.png)
 
 <h3 id="analytics-use-case">Analytics</h3>
