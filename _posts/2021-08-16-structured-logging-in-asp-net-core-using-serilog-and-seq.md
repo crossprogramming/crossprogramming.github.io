@@ -832,11 +832,37 @@ The bottom line is that structured logging help making business and technical de
 
 <h3 id="auditing-use-case">Auditing</h3>
 
-TODO
+Auditing is the process which allows recording user actions performed against particular parts of the application.
 
 <h4 id="audit-user-actions">Audit user actions</h4>
 
-TODO
+Knowing what user has performed a specific action helps stakeholders in making the right decision about where to invest the most effort when developing and/or maintaining an application.  
+Given that the previously mentioned __application flow__ concept logs both the flow name and its initiator, we can run the below query to understand who has done what and when:
+
+```sql
+select
+      ApplicationFlowName
+    , FlowInitiator
+    , ToIsoString(@Timestamp) as Date
+from stream  
+where @Timestamp >= Now() - 2h
+      and FlowInitiator <> NULL
+      and not StartsWith(ApplicationFlowName, 'Events/Application')
+      and ApplicationFlowName not in ['ApplicationFlowServingTestingPurposes', 'Database/RunMigrations', 'N/A']
+order by Date desc
+limit 10
+```
+
+The above query will discard several categories of events:
+
+- Older than 2 hours (`@Timestamp >= Now() - 2h`)
+- Not having a user associated with them (`FlowInitiator <> NULL`)
+- Not having their name starting with `Events/Application` string (`not StartsWith(ApplicationFlowName, 'Events/Application')`)
+- Not having their name appearing in a given list (`ApplicationFlowName not in ['ApplicationFlowServingTestingPurposes', 'Database/RunMigrations', 'N/A']`)
+
+Additionally, the query will fetch the first 10 events matching the given search criteria.  
+The query results look something like this:
+![fetch-data-for-auditing-user-actions-purposes]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/10-fetch-data-for-auditing-user-actions-purposes.png)
 
 <h3 id="performance-use-case">Performance</h3>
 
