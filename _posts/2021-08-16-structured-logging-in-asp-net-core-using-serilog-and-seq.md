@@ -866,11 +866,36 @@ The query results look something like this:
 
 <h3 id="performance-use-case">Performance</h3>
 
-TODO
+Being able to know about the hot spots of the application is crucial, since end-users are not happy dealing with an application which responds slowly; the stakeholders cannot be happy with ever-increasing bills for an application which is sub-optimal as it consumes way too much CPU, memory and storage.  
+You got the point - nobody is happy with an under-performant application; on the other hand, making a performant application needs the initial knowledge about what is not performant and here structured logging can help also, as we can query for events representing the data we care about, like: what operation took the most time to finish, what is the minimum amount of memory used by the application in the last 24 hours, so on and so forth.
 
 <h4 id="identify-slowest-sql-queries">Identify slowest SQL queries</h4>
 
-TODO
+I was quite amazed finding out that Entity Framework Core logs the time needed to execute each SQL statement via the `elapsed` property accompanying the `Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted` events.  
+Having this knowledge, I can fetch the slowest top 3 SQL commands executed by this ORM during the past 4 hours via:
+
+```sql
+select
+      @Id as ID
+    , commandText as RawSql
+    , parameters as Parameters
+    , ToNumber(elapsed) as ExecutionTimeInMillis
+from stream
+where
+    @Timestamp >= Now() - 4h
+    and EventId.Name = 'Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted'
+    and ExecutionTimeInMillis > 5
+    and commandText <> NULL
+    and commandText NOT LIKE '%FROM pg_catalog%'
+    and commandText NOT LIKE '%EFMigrationsHistory%'
+order by ExecutionTimeInMillis desc
+limit 3
+```
+
+The query results look something like this:
+![identify-slowest-sql-commands]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/11-identify-slowest-sql-commands.png)  
+
+Using the above information, developers with the help of a capable DBA will be able to optimize database access by focusing on the slowest queries. Of course, there are other ways of identifying slow queries (e.g. [3 ways to detect slow queries in PostgreSQL](https://www.cybertec-postgresql.com/en/3-ways-to-detect-slow-queries-in-postgresql/)), but since we're already using structured logging, this is one of the easiest way and will also work with any database supported by Entity Framework Core!
 
 <h4 id="identify-slowest-application-features">Identify slowest application features</h4>
 
