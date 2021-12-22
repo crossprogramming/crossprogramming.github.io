@@ -899,7 +899,25 @@ Using the above information, developers with the help of a capable DBA will be a
 
 <h4 id="identify-slowest-application-features">Identify slowest application features</h4>
 
-TODO
+Identifying such features is rather easy since we're using the same aforementioned application flow concept which logs the time spent with its execution.  
+We will query the top 3 slowest application flows via:
+
+```sql
+select *, ToNumber(ApplicationFlowDurationInMillis) as ExecutionTimeInMillis
+from stream  
+where 
+  @Timestamp >= Now() - 4h
+  and Has(ApplicationFlowOutcome)
+  and ExecutionTimeInMillis > 250
+order by ExecutionTimeInMillis desc
+limit 3
+```
+
+The above query will fetch data from the past 4 hours and will ignore flows which took less than 250 milliseconds to complete; the results look something like this:
+![identify-slowest-application-flows]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/12-identify-slowest-application-flows.png)  
+
+The first result (deleting a database row) has a rather unusual execution time (more than 70 seconds), so the developer should start improving the performance of the application by focusing first on optimizing this application flow.  
+(Well, this execution time is mostly due to debugging a test method on my machine, but *that* developer doesn't know this)
 
 <h2 id="references">References</h2>
 
