@@ -755,11 +755,80 @@ The above query projects the Seq built-in property `@Timestamp` into a new value
 
 <h3 id="analytics-use-case">Analytics</h3>
 
-TODO
+When running an application in production, we usually want to understand how its the end-users are using it in order to better shape it (e.g., invest most effort into most used features to make them more appealing and more useful, what features to discard as they are not used as much as expected, etc.). Structured logging can be used as a tool to get such data; this does not mean that no other analytics tool should be used, it's just that employing this one is very easy and it can offer good results without much effort.
 
 <h4 id="identify-most-used-application-features">Identify most used application features</h4>
 
-TODO
+Since the Todo Web API has been built around the concept of [application flows](https://github.com/satrapu/aspnet-core-logging/tree/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.ApplicationFlows), each processed business-related HTTP request will trigger the execution of a particular flow and its name, outcome and execution time, along with the user triggering it, are [logged](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.ApplicationFlows/NonTransactionalBaseApplicationFlow.cs#L48-L76) using log scopes:
+
+```cs
+public async Task<TOutput> ExecuteAsync(TInput input, IPrincipal flowInitiator)
+{
+    using (logger.BeginScope(new Dictionary<string, object> { [ApplicationFlowName] = flowName }))
+    {
+        bool isSuccess = false;
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        string flowInitiatorName = flowInitiator.GetNameOrDefault();
+
+        try
+        {
+            logger.LogInformation(
+                "User [{FlowInitiator}] has started executing application flow [{ApplicationFlowName}] ...",
+                flowInitiatorName, flowName);
+            TOutput output = await InternalExecuteAsync(input, flowInitiator);
+            isSuccess = true;
+            return output;
+        }
+        finally
+        {
+            stopwatch.Stop();
+            logger.LogInformation(
+                "User [{FlowInitiator}] has finished executing application flow [{ApplicationFlowName}] "
+                + "with the outcome: [{ApplicationFlowOutcome}]; "
+                + "time taken: [{ApplicationFlowDurationAsTimeSpan}] ({ApplicationFlowDurationInMillis}ms)",
+                flowInitiatorName, flowName, isSuccess ? "success" : "failure", stopwatch.Elapsed,
+                stopwatch.ElapsedMilliseconds);
+        }
+    }
+}
+```
+
+There are several important things worth mentioning regarding the above code fragment:
+
+- __{FlowInitiator}__: represents the obfuscated name of the user who has triggered the execution of the flow
+- __{ApplicationFlowName}__: pretty obvious
+- __{ApplicationFlowOutcome}__: represents the outcome of the flow: either __success__ or __failure__
+- __{ApplicationFlowDurationAsTimeSpan}__: a [string representation](https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-timespan-format-strings#the-constant-c-format-specifier) of the time needed to execute the flow
+- __{ApplicationFlowDurationInMillis}__: represents the number of milliseconds spent executing the flow
+
+Since these tokens will be available for later querying in Seq, this means we can see which are the most used application flows, along with their minimum, average and maximum durations, thus allowing business stakeholders prioritize development work; basically, the developers should focus first on reducing the execution time of the most used application flows with the largest average execution durations.  
+Run the below query to fetch this information:
+
+```sql
+select
+    count(*) as NumberOfCalls
+  , min(ApplicationFlowDurationInMillis) as MinDurationInMillis
+  , mean(ApplicationFlowDurationInMillis) as AvgDurationInMillis
+  , max(ApplicationFlowDurationInMillis) as MaxDurationInMillis
+from stream  
+where @Timestamp >= Now() - 8h
+      and ApplicationFlowName <> 'N/A'
+group by ApplicationFlowName
+having AvgDurationInMillis > 5
+order by NumberOfCalls desc
+```
+
+The above query will discard several categories of events:
+
+- Older than 8 hours (`@Timestamp >= Now() - 8h`)
+- Not belonging to a specific business-related application flow (`ApplicationFlowName <> 'N/A'`)
+- Have taken, in average, less than 5 milliseconds to execute (`having AvgDurationInMillis > 5`)
+
+The query results look something like this:
+![fetch-data-for-analytics-purposes]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/9-fetch-data-for-analytics-purposes.png)
+
+Based on the above data, it seems that developers should start looking into optimizing the `Events/ApplicationStarted/NotifyListeners`, `Events/ApplicationStarted` and `TodoItem/Delete` application flows. Since the first two of them happen when application starts, most likely deleting data should be optimized first!  
+The bottom line is that structured logging help making business and technical decisions as long as the relevant data has been logged.
 
 <h3 id="auditing-use-case">Auditing</h3>
 
