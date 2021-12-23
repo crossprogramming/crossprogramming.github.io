@@ -46,7 +46,7 @@ tags: [programming, dotnet, dotnet-core, aspnet-core, logging, structured-loggin
 <!-- markdownlint-disable MD033 -->
 <h2 id="context">Context</h2>
 
-Back in 2016 I was part of a team developing an e-care web application using SAP Hybris platform for an European telco. Among many other things, I was tasked with the initial deployment to the UAT environment which was supposed to be promoted to production as soon as the client would have validated that particular release. The web application was running in a Tomcat cluster made out of 8 or 9 Linux servers which I was able to access via SSH only, thus in order to investigate any issue occurring on that particular environment, I had to use CLI and run specific Linux commands in order to search for relevant lines of text found inside application log files - if I remember correctly, we were using [less](https://man7.org/linux/man-pages/man1/less.1.html) command.  
+Back in 2016 I was part of a team developing an e-care web application using SAP Hybris platform for an European telco. Among many other things, I was tasked with the initial deployment to the UAT environment which was supposed to be promoted to production as soon as the client would have validated that particular release. The web application was running in a Tomcat cluster made out of 8 or 9 Linux servers which I was able to access via SSH only, thus in order to investigate any issue occurring on that particular environment, I had to run specific Linux commands inside the console to search for relevant lines of text found inside application log files - if I remember correctly, we were using [less](https://man7.org/linux/man-pages/man1/less.1.html) command.  
 One of my colleagues had a MacBook Pro and with the help of [iterm2](https://iterm2.com/) he was able to split his window into one pane per server and run each command against all of them at the same time; unfortunately for me, I was using a laptop running Windows, so I had to open one console per server and run each command inside each console which was a very time consuming and error prone activity.  
 There were two particular issues with this approach (beside lack of productivity due to dealing with multiple consoles): any real-time investigation was limited by Linux CLI support for searching text files and when any more offline advanced investigation was needed, we had to ask the client IT department to send us specific log files and use a text editor like [Notepad++](https://notepad-plus-plus.org/) to search across several files. These issues are direct consequences of employing [unstructured logging](#unstructured-logging) when dealing with application events.
 
@@ -56,14 +56,14 @@ All code fragments found in this post are part of my pet project [aspnet-core-lo
 
 <h2 id="unstructured-logging">What is unstructured logging?</h2>
 
-Creating an application event is usually done by instantiating a string, maybe using [string interpolation](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/tokens/interpolated) and then sending it to a console, file or database using a logging library like [Log4Net](https://logging.apache.org/log4net/); an educated developer might even check whether the logging library will log the event before creating it to avoid waisting time and resources - see more details about such approach inside the __Performance__ section of the article found [here](https://logging.apache.org/log4net/release/manual/internals.html#performance).  
+Creating an application event is usually done by instantiating a string, maybe using [string interpolation](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/tokens/interpolated) and then sending it to a console, file or database using a logging library like [Log4Net](https://logging.apache.org/log4net/); an educated developer might even check whether the logging library has been configured to log that particular event before creating it to avoid waisting time and resources - see more details about such approach inside the __Performance__ section of the article found [here](https://logging.apache.org/log4net/release/manual/internals.html#performance).  
 This approach is called __logging__, since we keep a __log__ of events. As the events have been created using plain text, when we need to search for specific data inside the log, we usually resort to the basic search feature offered by the text editor at hand or maybe regular expressions. Neither approach is suitable for complex searches - a text editor can only search for words contained inside the events stored in one or more files, while writing a custom regex to fetch specific data is not an easy task, plus searching through *all* events means you need to access *all* log files, a feat which might involve terrabytes of data or even more; also, how would you write a regex to answer a question like: *What events created during this specific time range contain (or do not contain) this particular pieces of information*?  
 This is __unstructured logging__, since an event is just a line of text which does not have any structure.  
 
 <h2 id="structured-logging">What is structured logging?</h2>
 
 __Structured logging__ means creating events having a particular __structure__; such data can then be ingested by another service which offers the means to parse, index and finally query it.  
-ASP.NET Core was built having structure logging in mind with the help of [logging providers](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#logging-providers), [message templates](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-message-template) and [log scopes](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-scopes-1).
+ASP.NET Core was built having structure logging in mind with the help of [logging providers](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#logging-providers-1), [message templates](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-message-template-1) and [log scopes](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-scopes-1).
 
 Several years ago I stumbled upon one of Nicholas Blumhardt's [answers](https://softwareengineering.stackexchange.com/a/312586) on the internet which really got me thinking about structured logging. It took me years to finally have the opportunity of using it in a commercial project, but after using it, I strongly believe it's a game changer!
 
@@ -74,10 +74,10 @@ Read the rest of this post for the longer answer.
 
 <h2 id="what-is-serilog">What is Serilog?</h2>
 
-ASP.NET Core provides several [built-in logging providers](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#built-in-logging-providers) and when I have initially started using this framework, as I was already familiar with Log4Net, I employed the [Microsoft.Extensions.Logging.Log4Net.AspNetCore](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Log4Net.AspNetCore/) NuGet package - that was mid 2018. Several months later, I stumbled upon [Serilog](https://serilog.net/) and [Seq](https://datalust.co/seq) and I was blown away by this very powerful combination.  
+ASP.NET Core provides several [built-in logging providers](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#built-in-logging-providers-1) and when I have initially started using this framework, as I was already familiar with Log4Net, I employed the [Microsoft.Extensions.Logging.Log4Net.AspNetCore](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Log4Net.AspNetCore/) NuGet package - that was mid 2018. Several months later, I stumbled upon [Serilog](https://serilog.net/) and [Seq](https://datalust.co/seq) and I was blown away by this very powerful combination.  
 
-__Serilog__ is a logging framework *with powerful structured event data in mind* (as stated on its [home page](https://serilog.net/)) which was initially released as a [NuGet package](https://www.nuget.org/packages/Serilog/) in 2013. One uses Serilog to create events having a given structure and stores them in specific place, like a file or database. Serilog uses several *nouns*, like: [sinks](#serilog-sinks), [enrichers](#serilog-enrichers), [properties](#serilog-properties) and [destructuring policies](#serilog-destructuring) and others, at the same time offering the means to configure its behavior either via code-based or file-based [configuration sources](#configure-serilog).  
-The community around this library is pretty solid, as seen on [NuGet gallery](https://www.nuget.org/packages?q=Tags%3A%22serilog%22%22), so one more reason to make Serilog my logging framework of choice!
+__Serilog__ is a logging framework *with powerful structured event data in mind* (as stated on its [home page](https://serilog.net/)) which was initially released as a [NuGet package](https://www.nuget.org/packages/Serilog/) in 2013. One uses Serilog to create events having a given structure and stores them in specific place, like a file or database. Serilog uses several *nouns*, like: [sinks](#serilog-sinks), [enrichers](#serilog-enrichers), [properties](#serilog-properties), [destructuring policies](#serilog-destructuring) and others, at the same time offering the means to configure its behavior either via code-based or file-based [configuration sources](#configure-serilog).  
+The community around this library is pretty solid, as seen on [NuGet gallery](https://www.nuget.org/packages?q=Tags%3A%22serilog%22%22), so one more reason to make Serilog my preferred logging framework!
 
 <h3 id="serilog-sinks">Serilog sinks</h3>
 
@@ -144,7 +144,7 @@ There are several __important things__ worth mentioning:
     - `Timestamp` represents the date and time when the event was created
     - `Level` represents the logging level associated with the event
     - `SourceContext` represents the name of the `logger` used for creating the event; usually it is the name of the class where event was created
-    - `NewLine` represents a new line to split event data to several lines
+    - `NewLine` represents a new line to split event data on several lines
     - `Message` represents the event data
     - `Exception` represents a logged exception (which includes its stack trace)
     - Though not used, there is another very important placeholder, `Properties`, which contains, obviously, all properties associated with the event
@@ -224,9 +224,9 @@ Here's the properties found inside [appsettings.Development.json](https://github
 
 There are several __important things__ worth mentioning:
 
-- The `N/A` values will be replaced at run-time by actual meaningful values (via [log scopes](#use-log-scopes), as described several sections below, to avoid coupling application code with Serilog API), e.g. `ApplicationFlowName` property will be populated with values like: `TodoItem/Add`, `TodoItems/FetchByQuery` or `Security/GenerateJwt`, based on what user action took place at a particular moment of time
+- The `N/A` values will be replaced at run-time by actual meaningful values (via [log scopes](#log-scopes), as described several sections below, to avoid coupling application code with Serilog API), e.g. `ApplicationFlowName` property will be populated with values like: `TodoItem/Add`, `TodoItems/FetchByQuery` or `Security/GenerateJwt`, based on what user action took place at a particular moment of time
 - All of the properties above act as __global__ ones, since they will accompany __any__ event
-- Due to the built-in [configuration override mechanism](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-5.0#appsettingsjson) provided by ASP.NET Core, when application runs in any environment, each event will be accompanied by `Application`, `ApplicationFlowName`, `ConversationId` and `ThreadId` properties, but the value of the `Application` property will be set to __`Todo.WebApi`__ when application runs in __production__ environment and will be set to __`Todo.WebApi.Development`__ when application runs in __development__ environment.
+- Due to the built-in [configuration override mechanism](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-5.0#appsettingsjson-1) provided by ASP.NET Core, when application runs in any environment, each event will be accompanied by `Application`, `ApplicationFlowName`, `ConversationId` and `ThreadId` properties, but the value of the `Application` property will be set to __`Todo.WebApi`__ when application runs in __production__ environment and will be set to __`Todo.WebApi.Development`__ when application runs in __development__ environment.
 
 <h3 id="serilog-stringification">Serilog stringification</h3>
 
@@ -482,7 +482,7 @@ There are several __important things__ worth mentioning:
 <h3 id="query-seq-data">Crash course for querying Seq data</h3>
 
 Seq uses a SQL-like query language for querying ingested events which is *very* well [documented](https://docs.datalust.co/docs/the-seq-query-language); due to its sheer complexity, it cannot be the topic of just *one* post, so I will only show several examples and let the reader consult the official documentation.  
-Another reason for not writing more about Seq is that you may decide to use a different server for querying structured events, like Azure Application Insights, so any Seq related info will not help you at all.
+Another reason for not writing more about Seq is that you might decide to use a different server for querying structured events, like [Azure Monitor](https://azure.microsoft.com/en-us/services/monitor/) and its component [Application Insights](https://docs.microsoft.com/en-us/azure/azure-monitor/app/app-insights-overview), so any Seq related info will not help you at all.
 
 - Given a user, what application flows did he executed during the past 24 hours?
 
@@ -543,7 +543,7 @@ public class TodoItemService : ITodoItemService
 
 <h3 id="logging-providers">Logging providers</h3>
 
-I've already mentioned Serilog as an ASP.NET Core [logging provider](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#logging-providers). Microsoft offers several built-in logging providers, but there are plenty [3rd parties](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#third-party-logging-providers) as well.  
+I've already mentioned Serilog as an ASP.NET Core [logging provider](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#logging-providers-1). Microsoft offers several built-in logging providers, but there are plenty [3rd parties](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#third-party-logging-providers-1) as well.  
 In case you have invested in a specific logging framework, like Log4Net or NLog, the good news is you'll most likely be able to use it, as community most likely has provided an integration with ASP.NET Core.  
 If such integration is missing, it's a good opportunity for a developer to make a name for himself ;)!
 
@@ -558,7 +558,7 @@ logger.LogInformation($"User with name {user.UserName} has initiated action {act
 ```
 
 The Log4Net based logging provider I was using at that time would happily write the above string inside the currently configured console or file, but that was an *unstructured* way of logging.  
-The *structured* way means treating `message` as a [__message template__](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-message-template) and not as a plain string. The logging provider knows how to create the event based on this template, but will also have the chance of promoting the actual values used for replacing the placeholders to properties which have specific semantics, thus being able to handle a *structured* event.  
+The *structured* way means treating `message` as a [__message template__](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-message-template-1) and not as a plain string. The logging provider knows how to create the event based on this template, but will also have the chance of promoting the actual values used for replacing the placeholders to properties which have specific semantics, thus being able to handle a *structured* event.  
 
 Considering all of the above, the __correct__ way of logging structured events in ASP.NET Core is:
 
@@ -573,6 +573,7 @@ There are several __important things__ worth mentioning:
 - The above code fragment contains:
   - A __message template__: `User with name {UserName} has initiated action {ActionName}`
   - Two __placeholders__: `{UserName}` and `{ActionName}`
+    - Please note I'm using [Pascal case](https://techterms.com/definition/pascalcase) for their names, as they represent properties I will most probably use inside Seq queries
   - Two __values__ which will replace the placeholders when the logging provider will handle the event at run-time: `user.UserName` and `action.Name`
     - The order of the values *is* important, since each placeholder will be replaced with the corresponding value
 - We no longer need to use string interpolation
@@ -638,13 +639,15 @@ This query will find several events:
 
 Aggregating application events (and not just this kind of events, as one could also collect events generated by the infrastructure used for running this application!) into one place and being able to query them using a structured language is very powerful and can cut costs expressed in reduced issue investigation time, reduced employee & end-user frustration, increased chance of making the best possible business decisions, and more, so much more!
 
+__IMPORTANT__: I took the liberty of describing several use cases where I personally believe structured logging really shines, but most certainly they are not the only ones!
+
 <h3 id="debugging-use-case">Debugging</h3>
 
-One of the most common purposes we use logging for is __debugging__; since we usually must not attach a debugger to a production environment to investigate an issue as this might cause even worse ones, we rely upon reading the existing logged events to figure why a particular piece of application behaves the way it does.
+One of the most common purposes we use logging for is __debugging__; since we usually must not attach a debugger to a production environment to investigate an issue as this will most likely cause worse ones, we have to rely on reading the existing logged events to figure why a particular piece of application behaves the way it does.
 
 <h4 id="identify-error-root-cause">Identify error root cause</h4>
 
-In case the application throws an exception, we usually log it and display a notification to the end-user saying that an error has occurred while processing his request. We can do better than that: let's generate an error ID, include it inside the message used for logging the exception and make sure the notification to the end-user mentions it so that any bug report which will eventually need to be taken care by the developers will include it. It's way easier to run a query to fetch the exception with its details once you know its associated error ID than it is to manually search through all events logged during the period of time mentioned inside the bug report (usually given by the time when the report was created, though the report might be created at a later time after the bug was spotted).  
+In case the application throws an exception, we usually log it and display a notification to the end-user saying that an error has occurred while processing his request. We can do better than that: let's generate an error ID, include it inside the message used for logging the exception and make sure the notification to the end-user mentions it too so that any bug report which will eventually need to be taken care by the developers will include it. It's way easier to run a query to fetch the exception along with all of its relevant details once you know its associated error ID than it is to manually search through all events logged during the period of time mentioned inside the bug report (usually given by the time when the report was created, though the report might be created at a later time after the bug was spotted).  
 
 We need to configure [exception handling](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/error-handling?view=aspnetcore-5.0) inside the [Startup.Configure method](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/Startup.cs#L120-L124):
 
@@ -704,33 +707,9 @@ This query will find exactly one event:
 
 <h4 id="fetch-conversation-events">Fetch events from same conversation</h4>
 
-Let's assume we have received a bug report mentioning the above error ID, `1d6640cd16974e84b5ef7deacc590a6b`. We can query Seq to get the exception details, but what happened during that HTTP request until that moment? To answer this question, we need to have the means of grouping events generated during the same __conversation__, which represents a period of time usually greater or equal to the duration of an HTTP request, but less than the current user session. ASP.NET Core has built-in support for grouping requests, as documented [here](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#automatically-log-scope-with-spanid-traceid-and-parentid); on the other hand, as I'm a rather curious person, I've implemented my own [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-5.0) to inject the conversation ID via log scope into each event generated during the same conversation, as seen inside the [ConversationIdMiddleware.Invoke method](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/Logging/ConversationIdProviderMiddleware.cs#L29-L47):
+Let's assume we have received a bug report mentioning the above error ID, `1d6640cd16974e84b5ef7deacc590a6b`. We can query Seq to get the exception details, but what happened during that HTTP request until that moment? To answer this question, I will re-use the aforementioned conversation ID concept. ASP.NET Core has built-in support for grouping requests, as documented [here](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#automatically-log-scope-with-spanid-traceid-and-parentid); on the other hand, as I'm a rather curious person, I've implemented my own [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-5.0) to inject the conversation ID via log scope into each event generated during the same conversation, as already seen inside the [ConversationIdMiddleware.Invoke method](https://github.com/satrapu/aspnet-core-logging/blob/2cec7a7990a9ef2fdf61011baedfeff9d8da21e8/Sources/Todo.WebApi/Logging/ConversationIdProviderMiddleware.cs#L29-L47).
 
-```cs
-public async Task Invoke(HttpContext httpContext)
-{
-    if (!httpContext.Request.Headers.TryGetValue(ConversationId, out StringValues conversationId)
-        || string.IsNullOrWhiteSpace(conversationId))
-    {
-        conversationId = Guid.NewGuid().ToString("N");
-        httpContext.Request.Headers.Add(ConversationId, conversationId);
-    }
-
-    httpContext.Response.Headers.Add(ConversationId, conversationId);
-
-    using (logger.BeginScope(new Dictionary<string, object>
-    {
-        [ConversationId] = conversationId.ToString()
-    }))
-    {
-        await nextRequestDelegate(httpContext);
-    }
-}
-```
-
-The above code ensures that each request and response pair will use the same HTTP header with the same value, furthermore, any event logged while processing the request will be accompanied by a conversation ID.  
-
-Identifying the appropriate `conversation ID` knowing the `error ID` can be done via:
+Identifying the appropriate `conversation ID` when we already know the `error ID` can be done via:
 
 ```sql
 select ConversationId
@@ -755,7 +734,7 @@ The above query projects the Seq built-in property `@Timestamp` into a new value
 
 <h3 id="analytics-use-case">Analytics</h3>
 
-When running an application in production, we usually want to understand how its the end-users are using it in order to better shape it (e.g., invest most effort into most used features to make them more appealing and more useful, what features to discard as they are not used as much as expected, etc.). Structured logging can be used as a tool to get such data; this does not mean that no other analytics tool should be used, it's just that employing this one is very easy and it can offer good results without much effort.
+When running an application in production, we usually want to understand how its end-users are using it in order to better shape it (e.g., invest most effort into most used features to make them more appealing and more useful, what features to discard as they are not used as much as expected, etc.). Structured logging can be used as a tool to get such data; this does not mean that no other analytics tool should be used, it's just that employing this one is very easy and it can offer good results without much effort.
 
 <h4 id="identify-most-used-application-features">Identify most used application features</h4>
 
@@ -828,7 +807,7 @@ The query results look something like this:
 ![fetch-data-for-analytics-purposes]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/9-fetch-data-for-analytics-purposes.png)
 
 Based on the above data, it seems that developers should start looking into optimizing the `Events/ApplicationStarted/NotifyListeners`, `Events/ApplicationStarted` and `TodoItem/Delete` application flows. Since the first two of them happen when application starts, most likely deleting data should be optimized first!  
-The bottom line is that structured logging help making business and technical decisions as long as the relevant data has been logged.
+The bottom line is that structured logging helps making business and technical decisions, as long as the relevant data has been properly logged.
 
 <h3 id="auditing-use-case">Auditing</h3>
 
@@ -857,8 +836,8 @@ The above query will discard several categories of events:
 
 - Older than 2 hours (`@Timestamp >= Now() - 2h`)
 - Not having a user associated with them (`FlowInitiator <> NULL`)
-- Not having their name starting with `Events/Application` string (`not StartsWith(ApplicationFlowName, 'Events/Application')`)
-- Not having their name appearing in a given list (`ApplicationFlowName not in ['ApplicationFlowServingTestingPurposes', 'Database/RunMigrations', 'N/A']`)
+- Not having their names starting with `Events/Application` string (`not StartsWith(ApplicationFlowName, 'Events/Application')`)
+- Not having their names appearing in a given list (`ApplicationFlowName not in ['ApplicationFlowServingTestingPurposes', 'Database/RunMigrations', 'N/A']`)
 
 Additionally, the query will fetch the first 10 events matching the given search criteria.  
 The query results look something like this:
@@ -895,7 +874,7 @@ limit 3
 The query results look something like this:
 ![identify-slowest-sql-commands]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/11-identify-slowest-sql-commands.png)  
 
-Using the above information, developers with the help of a capable DBA will be able to optimize database access by focusing on the slowest queries. Of course, there are other ways of identifying slow queries (e.g. [3 ways to detect slow queries in PostgreSQL](https://www.cybertec-postgresql.com/en/3-ways-to-detect-slow-queries-in-postgresql/)), but since we're already using structured logging, this is one of the easiest way and will also work with any database supported by Entity Framework Core!
+Using the above information, developers with the help of a capable DBA will be able to optimize database access by focusing on the slowest queries. Of course, there are other ways of identifying slow queries (e.g. [3 ways to detect slow queries in PostgreSQL](https://www.cybertec-postgresql.com/en/3-ways-to-detect-slow-queries-in-postgresql/)), but since we're already using structured logging, this is one of the easiest way and will also work with [any database](https://docs.microsoft.com/en-us/ef/core/providers/?tabs=dotnet-core-cli#current-providers) supported by Entity Framework Core!
 
 <h4 id="identify-slowest-application-features">Identify slowest application features</h4>
 
@@ -917,7 +896,7 @@ The above query will fetch data from the past 4 hours and will ignore flows whic
 ![identify-slowest-application-flows]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/12-identify-slowest-application-flows.png)  
 
 The first result (deleting a database row) has a rather unusual execution time (more than 70 seconds), so the developer should start improving the performance of the application by focusing first on optimizing this application flow.  
-(Well, this execution time is mostly due to debugging a test method on my machine, but *that* developer doesn't know this)
+(Well, this execution time is mostly due to debugging a test method on my machine, but *that* developer doesn't know this yet)
 
 <h2 id="references">References</h2>
 
@@ -956,11 +935,12 @@ The first result (deleting a database row) has a rather unusual execution time (
   - Alternatives
     - [ELK Stack](https://www.elastic.co/what-is/elk-stack)
     - Others
+- [Nicholas Blumhardt's blog](https://nblumhardt.com/)
 
 <h2 id="conclusion">Conclusion</h2>
 
 Structured logging is not just for debugging purposes, as it can be used for various other purposes, like: spotting performance bottlenecks, auditing, analytics, distributed tracing and a lot more.  
 Using structured logging is definitely one of the best ways a developer can employ in order to help both business and technical stakeholders make better and more informed decisions to positively impact the outcome of a particular software system.  
-The only downside to structured logging I see right now is that you have to learn a new language for each server you are going to use for querying events, so you need to learn one when using Seq and another one when using Azure Application Insights, but I think the price is well worth it due to the amazing amount of information you can extract.
+The only downside to structured logging I see right now is that you have to learn a new language for each server you are going to use for querying events, so for instance, you need to learn one when using Seq and another one when using Azure Application Insights, but I think the price is well worth it due to the amazing amount of information you can extract.
 
 So what are you waiting for? Go put some structure into your events and query them like a boss!
