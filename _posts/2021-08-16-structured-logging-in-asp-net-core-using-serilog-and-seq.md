@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Structured logging in ASP.NET Core using Serilog and Seq"
-date: 2021-08-16 22:40:07 +0200
+date: 2021-12-23 12:52:47 +0200
 tags: [programming, dotnet, dotnet-core, aspnet-core, logging, structured-logging, serilog, seq, docker, docker-compose]
 ---
 
