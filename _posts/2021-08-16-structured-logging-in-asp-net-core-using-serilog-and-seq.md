@@ -801,7 +801,7 @@ The above query will discard several categories of events:
 
 - Older than 8 hours (`@Timestamp >= Now() - 8h`)
 - Not belonging to a specific business-related application flow (`ApplicationFlowName <> 'N/A'`)
-- Have taken, in average, less than 5 milliseconds to execute (`having AvgDurationInMillis > 5`)
+- Have taken, in average, more than 5 milliseconds to execute (`having AvgDurationInMillis > 5`)
 
 The query results look something like this:
 ![fetch-data-for-analytics-purposes]({{ site.baseurl }}/assets/structured-logging-in-aspnet-core-using-serilog-and-seq/9-fetch-data-for-analytics-purposes.png)
